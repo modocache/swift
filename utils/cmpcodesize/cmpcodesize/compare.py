@@ -83,52 +83,42 @@ def readSizes(sizes, fileName, functionDetails, groupByPrefix):
     fat_headers = otool.fat_headers(fileName)
     architecture = regex.architecture(fat_headers)
     if functionDetails:
-        content = otool.load_commands(fileName,
-                                      architecture=architecture,
-                                      include_text_sections=True).split('\n')
-        content += otool.text_sections(fileName,
-                                       architecture=architecture).split('\n')
+        content = otool.load_commands(fileName, architecture=architecture,
+                                      include_text_sections=True)
+        content += otool.text_sections(fileName, architecture=architecture)
     else:
-        content = otool.load_commands(fileName,
-                                      architecture=architecture).split('\n')
+        content = otool.load_commands(fileName, architecture=architecture)
 
     sectName = None
     currFunc = None
     startAddr = None
     endAddr = None
 
-    # FIXME: Move re calls into cmpcodesize.regex module.
-    sectionPattern = re.compile(' +sectname ([\S]+)')
-    sizePattern = re.compile(' +size ([\da-fx]+)')
-    asmlinePattern = re.compile('^([0-9a-fA-F]+)\s')
-    labelPattern = re.compile('^((\-*\[[^\]]*\])|[^\/\s]+):$')
-
-    for line in content:
-        asmlineMatch = asmlinePattern.match(line)
-        if asmlineMatch:
-            addr = int(asmlineMatch.group(1), 16)
+    for line in content.splitlines():
+        asm = regex.address(line)
+        if asm:
             if startAddr is None:
-                startAddr = addr
-            endAddr = addr
-        elif line == "Section":
+                startAddr = asm
+            endAddr = asm
+        elif line == 'Section':
             sectName = None
         else:
-            labelMatch = labelPattern.match(line)
-            sizeMatch = sizePattern.match(line)
-            sectionMatch = sectionPattern.match(line)
-            if labelMatch:
-                funcName = labelMatch.group(1)
+            label = regex.label(line)
+            size = regex.size(line)
+            section = regex.section(line)
+            if label:
+                funcName = label
                 addFunction(sizes, currFunc, startAddr, endAddr, groupByPrefix)
                 currFunc = funcName
                 startAddr = None
                 endAddr = None
-            elif sizeMatch and sectName and groupByPrefix:
-                size = int(sizeMatch.group(1), 16)
+            elif size and sectName and groupByPrefix:
+                print(line)
                 sizes[sectName] += size
-            elif sectionMatch:
-                sectName = sectionMatch.group(1)
-                if sectName == "__textcoal_nt":
-                    sectName = "__text"
+            elif section:
+                sectName = section
+                if sectName == '__textcoal_nt':
+                    sectName = '__text'
 
     addFunction(sizes, currFunc, startAddr, endAddr, groupByPrefix)
 
