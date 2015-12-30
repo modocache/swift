@@ -15,7 +15,7 @@ import os
 import collections
 from operator import itemgetter
 
-from cmpcodesize import otool, regex
+from cmpcodesize import otool, parser, regex
 
 Prefixes = {
     # Cpp
@@ -78,8 +78,11 @@ def addFunction(sizes, function, startAddr, endAddr, groupByPrefix):
 
 
 def readSizes(sizes, fileName, functionDetails, groupByPrefix):
-    # Check if multiple architectures are supported by the object file.
-    # Prefer arm64 if available.
+    """
+    Run 'otool' on the Mach-O file with the given 'fileName'. Read the regions
+    of the output (sections and labels) and store their sizes in the 'sizes'
+    dict.
+    """
     fat_headers = otool.fat_headers(fileName)
     architecture = regex.architecture(fat_headers)
     if functionDetails:
@@ -89,38 +92,14 @@ def readSizes(sizes, fileName, functionDetails, groupByPrefix):
     else:
         content = otool.load_commands(fileName, architecture=architecture)
 
-    sectName = None
-    currFunc = None
-    startAddr = None
-    endAddr = None
-
-    for line in content.splitlines():
-        asm = regex.address(line)
-        if asm:
-            if startAddr is None:
-                startAddr = asm
-            endAddr = asm
-        elif line == 'Section':
-            sectName = None
+    for region in parser.parse(content):
+        if isinstance(region, parser.MachOSection):
+            if region.name == '__textcoal_nt':
+                region.name = '__text'
+            sizes[region.name] += region.size
         else:
-            label = regex.label(line)
-            size = regex.size(line)
-            section = regex.section(line)
-            if label:
-                funcName = label
-                addFunction(sizes, currFunc, startAddr, endAddr, groupByPrefix)
-                currFunc = funcName
-                startAddr = None
-                endAddr = None
-            elif size and sectName and groupByPrefix:
-                print(line)
-                sizes[sectName] += size
-            elif section:
-                sectName = section
-                if sectName == '__textcoal_nt':
-                    sectName = '__text'
-
-    addFunction(sizes, currFunc, startAddr, endAddr, groupByPrefix)
+            addFunction(sizes, region.name, region.start_address,
+                        region.end_address, groupByPrefix)
 
 
 def compareSizes(oldSizes, newSizes, nameKey, title):
