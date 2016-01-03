@@ -1,4 +1,4 @@
-# test_list_function_sizes.py - Tests for list_function_sizes -*- python -*-
+# test_compare.py - Unit tests for cmpcodesize.compare -*- python -*-
 #
 # This source file is part of the Swift.org open source project
 #
@@ -32,6 +32,14 @@ class ListFunctionSizesTestCase(unittest.TestCase):
             {'size': 10, 'name': 'bar'},
             {'size': 100, 'name': 'baz'},
         ])
+
+
+class OutputCompareFunctionSizesTestCase(unittest.TestCase):
+    def test_when_format_is_plaintext_(self):
+        pass
+
+    def test_when_format_is_csv_(self):
+        pass
 
 if __name__ == '__main__':
     unittest.main()

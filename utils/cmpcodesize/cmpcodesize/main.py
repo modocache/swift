@@ -22,6 +22,7 @@ from cmpcodesize.compare import (
     compareSizesOfFile,
     readSizes,
     list_function_sizes,
+    output_compare_function_sizes,
 )
 from cmpcodesize.output import Format, print_listed_function_sizes
 
@@ -189,7 +190,9 @@ How to specify files:
             print_listed_function_sizes(list_function_sizes(sizes.items()),
                                         parsed_arguments.format)
         else:
-            compareFunctionSizes(oldFiles, newFiles)
+            old_sizes, new_sizes = compareFunctionSizes(oldFiles, newFiles)
+            output_compare_function_sizes(
+                old_sizes, new_sizes, parsed_arguments.format)
     else:
         print("%-26s%16s  %8s  %8s  %s" % ("", "Section", "Old", "New", "Percent"))
         if parsed_arguments.sum_sizes:

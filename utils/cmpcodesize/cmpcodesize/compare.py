@@ -12,6 +12,7 @@ from __future__ import print_function
 
 import re
 import os
+import sys
 import collections
 from operator import itemgetter
 
@@ -162,21 +163,33 @@ def list_function_sizes(sizes):
         yield {'size': pair[1], 'name': pair[0]}
 
 
-def compareFunctionSizes(oldFiles, newFiles):
-    oldSizes = collections.defaultdict(int)
-    newSizes = collections.defaultdict(int)
-    for name in oldFiles:
-        readSizes(oldSizes, name, True, False)
-    for name in newFiles:
-        readSizes(newSizes, name, True, False)
+def output_compare_function_sizes(
+        oldSizes,
+        newSizes,
+        format_option,
+        first_only_out=sys.stdout,
+        second_only_out=sys.stdout,
+        both_out=sys.stdout):
+    """
+    Given two lists of functions and their sizes:
 
+    1. Output the size of each function that only exists in the first list,
+       as well as the total size of all functions that only exist in the first
+       list.
+    2. Same as (1), but for the second list.
+    3. For each function that exists in both lists, output its size in the
+       first, its size in the second, and the difference between the two.
+
+    The output for each of these three items may be redirected using the
+    'first_only_out', 'second_only_out', and 'both_out' parameters. By default,
+    these are directed to stdout.
+    """
     onlyInFile1 = []
     onlyInFile2 = []
     inBoth = []
 
     onlyInFile1Size = 0
     onlyInFile2Size = 0
-    inBothSize = 0
 
     for func, oldSize in oldSizes.items():
         newSize = newSizes[func]
@@ -193,36 +206,37 @@ def compareFunctionSizes(oldFiles, newFiles):
             onlyInFile2Size += newSize
 
     if onlyInFile1:
-        print("Only in old file(s)")
+        output.print_plaintext('Only in old file(s)',
+                               format_option, out=first_only_out)
         output.print_listed_function_sizes(list_function_sizes(onlyInFile1),
-                                           output.Format.PLAINTEXT)
-        print("Total size of functions only in old file: {}".format(onlyInFile1Size))
-        print()
+                                           format_option, out=first_only_out)
+        output.print_plaintext('Total size of functions only in old file: '
+                               '{}\n'.format(onlyInFile1Size),
+                               format_option, out=first_only_out)
 
     if onlyInFile2:
-        print("Only in new files(s)")
+        output.print_plaintext('Only in new files(s)',
+                               format_option, out=second_only_out)
         output.print_listed_function_sizes(list_function_sizes(onlyInFile2),
-                                           output.Format.PLAINTEXT)
-        print("Total size of functions only in new file: {}".format(onlyInFile2Size))
-        print()
-
+                                           format_option, out=second_only_out)
+        output.print_plaintext('Total size of functions only in new file: '
+                               '{}\n'.format(onlyInFile2Size),
+                               format_option, out=second_only_out)
     if inBoth:
-        sizeIncrease = 0
-        sizeDecrease = 0
-        print("%8s %8s %8s" % ("old", "new", "diff"))
-        for triple in sorted(inBoth, key=lambda tup: (tup[2] - tup[1], tup[1])):
-            func = triple[0]
-            oldSize = triple[1]
-            newSize = triple[2]
-            diff = newSize - oldSize
-            if diff > 0:
-                sizeIncrease += diff
-            else:
-                sizeDecrease -= diff
-            if diff == 0:
-                inBothSize += newSize
-            print("%8d %8d %8d %s" %(oldSize, newSize, newSize - oldSize, func))
-        print("Total size of functions with the same size in both files: {}".format(inBothSize))
-        print("Total size of functions that got smaller: {}".format(sizeDecrease))
-        print("Total size of functions that got bigger: {}".format(sizeIncrease))
-        print("Total size change of functions present in both files: {}".format(sizeIncrease - sizeDecrease))
+        output.print_compare_function_sizes(inBoth,
+                                            format_option, out=both_out)
+
+
+def compareFunctionSizes(oldFiles, newFiles):
+    """
+    Given two lists of Mach-O files, return a tuple of dicts; the first element
+    is a dictionary of functions in the first list and their sizes, and the
+    second element is a dictionary for the second list.
+    """
+    oldSizes = collections.defaultdict(int)
+    newSizes = collections.defaultdict(int)
+    for name in oldFiles:
+        readSizes(oldSizes, name, True, False)
+    for name in newFiles:
+        readSizes(newSizes, name, True, False)
+    return (oldSizes, newSizes)
