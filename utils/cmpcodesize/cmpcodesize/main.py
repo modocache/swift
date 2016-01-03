@@ -17,8 +17,13 @@ import os
 import glob
 import collections
 
-from cmpcodesize.compare import \
-    compareFunctionSizes, compareSizesOfFile, listFunctionSizes, readSizes
+from cmpcodesize.compare import (
+    compareFunctionSizes,
+    compareSizesOfFile,
+    readSizes,
+    list_function_sizes,
+)
+from cmpcodesize.output import Format, print_listed_function_sizes
 
 
 SHORTCUTS = {
@@ -99,6 +104,10 @@ How to specify files:
                         action='store_true',
                         dest='sum_sizes',
                         default=False)
+    parser.add_argument('-f', '--format',
+                        help='How to format the output.',
+                        choices=[Format.PLAINTEXT, Format.CSV],
+                        default=Format.CSV)
 
     # Positional arguments.
     # These can be specified in means beyond what argparse supports,
@@ -177,7 +186,8 @@ How to specify files:
             sizes = collections.defaultdict(int)
             for file in oldFiles:
                 readSizes(sizes, file, True, False)
-            print(os.linesep.join(listFunctionSizes(sizes.items())))
+            print_listed_function_sizes(list_function_sizes(sizes.items()),
+                                        parsed_arguments.format)
         else:
             compareFunctionSizes(oldFiles, newFiles)
     else:

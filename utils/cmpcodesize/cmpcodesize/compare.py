@@ -15,7 +15,7 @@ import os
 import collections
 from operator import itemgetter
 
-from cmpcodesize import otool, parser, regex
+from cmpcodesize import otool, output, parser, regex
 
 Prefixes = {
     # Cpp
@@ -153,11 +153,13 @@ def compareSizesOfFile(oldFiles, newFiles, allSections, listCategories):
         compareSizes(oldSizes, newSizes, "__bss", sectionTitle)
 
 
-def listFunctionSizes(sizeArray):
-    for pair in sorted(sizeArray, key=itemgetter(1)):
-        name = pair[0]
-        size = pair[1]
-        yield "%8d %s" % (size, name)
+def list_function_sizes(sizes):
+    """
+    Given a list of function name and size tuples, yield dicts for those sizes.
+    The dicts are sorted based on their size.
+    """
+    for pair in sorted(sizes, key=itemgetter(1)):
+        yield {'size': pair[1], 'name': pair[0]}
 
 
 def compareFunctionSizes(oldFiles, newFiles):
@@ -192,13 +194,15 @@ def compareFunctionSizes(oldFiles, newFiles):
 
     if onlyInFile1:
         print("Only in old file(s)")
-        print(listFunctionSizes(onlyInFile1))
+        output.print_listed_function_sizes(list_function_sizes(onlyInFile1),
+                                           output.Format.PLAINTEXT)
         print("Total size of functions only in old file: {}".format(onlyInFile1Size))
         print()
 
     if onlyInFile2:
         print("Only in new files(s)")
-        print(listFunctionSizes(onlyInFile2))
+        output.print_listed_function_sizes(list_function_sizes(onlyInFile2),
+                                           output.Format.PLAINTEXT)
         print("Total size of functions only in new file: {}".format(onlyInFile2Size))
         print()
 
