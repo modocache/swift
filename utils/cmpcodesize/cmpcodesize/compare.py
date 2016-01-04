@@ -12,9 +12,11 @@ from __future__ import print_function
 
 import re
 import os
-import subprocess
+import sys
 import collections
 from operator import itemgetter
+
+from cmpcodesize import otool, output, parser, regex
 
 Prefixes = {
     # Cpp
@@ -76,77 +78,29 @@ def addFunction(sizes, function, startAddr, endAddr, groupByPrefix):
         sizes[function] += size
 
 
-def flatten(*args):
-    for x in args:
-        if hasattr(x, '__iter__'):
-            for y in flatten(*x):
-                yield y
-        else:
-            yield x
-
-
 def readSizes(sizes, fileName, functionDetails, groupByPrefix):
-    # Check if multiple architectures are supported by the object file.
-    # Prefer arm64 if available.
-    architectures = subprocess.check_output(["otool", "-V", "-f", fileName]).split("\n")
-    arch = None
-    archPattern = re.compile('architecture ([\S]+)')
-    for architecture in architectures:
-        archMatch = archPattern.match(architecture)
-        if archMatch:
-            if arch is None:
-                arch = archMatch.group(1)
-            if "arm64" in arch:
-                arch = "arm64"
-    if arch is not None:
-      archParams = ["-arch", arch]
-    else:
-      archParams = []
-
+    """
+    Run 'otool' on the Mach-O file with the given 'fileName'. Read the regions
+    of the output (sections and labels) and store their sizes in the 'sizes'
+    dict.
+    """
+    fat_headers = otool.fat_headers(fileName)
+    architecture = regex.architecture(fat_headers)
     if functionDetails:
-        content = subprocess.check_output(flatten(["otool", archParams, "-l", "-v", "-t", fileName])).split("\n")
-        content += subprocess.check_output(flatten(["otool", archParams, "-v", "-s", "__TEXT", "__textcoal_nt", fileName])).split("\n")
+        content = otool.load_commands(fileName, architecture=architecture,
+                                      include_text_sections=True)
+        content += otool.text_sections(fileName, architecture=architecture)
     else:
-        content = subprocess.check_output(flatten(["otool", archParams, "-l", fileName])).split("\n")
+        content = otool.load_commands(fileName, architecture=architecture)
 
-    sectName = None
-    currFunc = None
-    startAddr = None
-    endAddr = None
-
-    sectionPattern = re.compile(' +sectname ([\S]+)')
-    sizePattern = re.compile(' +size ([\da-fx]+)')
-    asmlinePattern = re.compile('^([0-9a-fA-F]+)\s')
-    labelPattern = re.compile('^((\-*\[[^\]]*\])|[^\/\s]+):$')
-
-    for line in content:
-        asmlineMatch = asmlinePattern.match(line)
-        if asmlineMatch:
-            addr = int(asmlineMatch.group(1), 16)
-            if startAddr is None:
-                startAddr = addr
-            endAddr = addr
-        elif line == "Section":
-            sectName = None
+    for region in parser.parse(content):
+        if isinstance(region, parser.MachOSection):
+            if region.name == '__textcoal_nt':
+                region.name = '__text'
+            sizes[region.name] += region.size
         else:
-            labelMatch = labelPattern.match(line)
-            sizeMatch = sizePattern.match(line)
-            sectionMatch = sectionPattern.match(line)
-            if labelMatch:
-                funcName = labelMatch.group(1)
-                addFunction(sizes, currFunc, startAddr, endAddr, groupByPrefix)
-                currFunc = funcName
-                startAddr = None
-                endAddr = None
-            elif sizeMatch and sectName and groupByPrefix:
-                size = int(sizeMatch.group(1), 16)
-                sizes[sectName] += size
-            elif sectionMatch:
-                sectName = sectionMatch.group(1)
-                if sectName == "__textcoal_nt":
-                    sectName = "__text"
-
-    addFunction(sizes, currFunc, startAddr, endAddr, groupByPrefix)
+            addFunction(sizes, region.name, region.start_address,
+                        region.end_address, groupByPrefix)
 
 
 def compareSizes(oldSizes, newSizes, nameKey, title):
@@ -200,28 +154,42 @@ def compareSizesOfFile(oldFiles, newFiles, allSections, listCategories):
         compareSizes(oldSizes, newSizes, "__bss", sectionTitle)
 
 
-def listFunctionSizes(sizeArray):
-    for pair in sorted(sizeArray, key=itemgetter(1)):
-        name = pair[0]
-        size = pair[1]
-        return "%8d %s" % (size, name)
+def list_function_sizes(sizes):
+    """
+    Given a list of function name and size tuples, yield dicts for those sizes.
+    The dicts are sorted based on their size.
+    """
+    for pair in sorted(sizes, key=itemgetter(1)):
+        yield {'size': pair[1], 'name': pair[0]}
 
 
-def compareFunctionSizes(oldFiles, newFiles):
-    oldSizes = collections.defaultdict(int)
-    newSizes = collections.defaultdict(int)
-    for name in oldFiles:
-        readSizes(oldSizes, name, True, False)
-    for name in newFiles:
-        readSizes(newSizes, name, True, False)
+def output_compare_function_sizes(
+        oldSizes,
+        newSizes,
+        format_option,
+        first_only_out=sys.stdout,
+        second_only_out=sys.stdout,
+        both_out=sys.stdout):
+    """
+    Given two lists of functions and their sizes:
 
+    1. Output the size of each function that only exists in the first list,
+       as well as the total size of all functions that only exist in the first
+       list.
+    2. Same as (1), but for the second list.
+    3. For each function that exists in both lists, output its size in the
+       first, its size in the second, and the difference between the two.
+
+    The output for each of these three items may be redirected using the
+    'first_only_out', 'second_only_out', and 'both_out' parameters. By default,
+    these are directed to stdout.
+    """
     onlyInFile1 = []
     onlyInFile2 = []
     inBoth = []
 
     onlyInFile1Size = 0
     onlyInFile2Size = 0
-    inBothSize = 0
 
     for func, oldSize in oldSizes.items():
         newSize = newSizes[func]
@@ -238,34 +206,37 @@ def compareFunctionSizes(oldFiles, newFiles):
             onlyInFile2Size += newSize
 
     if onlyInFile1:
-        print("Only in old file(s)")
-        print(listFunctionSizes(onlyInFile1))
-        print("Total size of functions only in old file: {}".format(onlyInFile1Size))
-        print()
+        output.print_plaintext('Only in old file(s)',
+                               format_option, out=first_only_out)
+        output.print_listed_function_sizes(list_function_sizes(onlyInFile1),
+                                           format_option, out=first_only_out)
+        output.print_plaintext('Total size of functions only in old file: '
+                               '{}\n'.format(onlyInFile1Size),
+                               format_option, out=first_only_out)
 
     if onlyInFile2:
-        print("Only in new files(s)")
-        print(listFunctionSizes(onlyInFile2))
-        print("Total size of functions only in new file: {}".format(onlyInFile2Size))
-        print()
-
+        output.print_plaintext('Only in new files(s)',
+                               format_option, out=second_only_out)
+        output.print_listed_function_sizes(list_function_sizes(onlyInFile2),
+                                           format_option, out=second_only_out)
+        output.print_plaintext('Total size of functions only in new file: '
+                               '{}\n'.format(onlyInFile2Size),
+                               format_option, out=second_only_out)
     if inBoth:
-        sizeIncrease = 0
-        sizeDecrease = 0
-        print("%8s %8s %8s" % ("old", "new", "diff"))
-        for triple in sorted(inBoth, key=lambda tup: (tup[2] - tup[1], tup[1])):
-            func = triple[0]
-            oldSize = triple[1]
-            newSize = triple[2]
-            diff = newSize - oldSize
-            if diff > 0:
-                sizeIncrease += diff
-            else:
-                sizeDecrease -= diff
-            if diff == 0:
-                inBothSize += newSize
-            print("%8d %8d %8d %s" %(oldSize, newSize, newSize - oldSize, func))
-        print("Total size of functions with the same size in both files: {}".format(inBothSize))
-        print("Total size of functions that got smaller: {}".format(sizeDecrease))
-        print("Total size of functions that got bigger: {}".format(sizeIncrease))
-        print("Total size change of functions present in both files: {}".format(sizeIncrease - sizeDecrease))
+        output.print_compare_function_sizes(inBoth,
+                                            format_option, out=both_out)
+
+
+def compareFunctionSizes(oldFiles, newFiles):
+    """
+    Given two lists of Mach-O files, return a tuple of dicts; the first element
+    is a dictionary of functions in the first list and their sizes, and the
+    second element is a dictionary for the second list.
+    """
+    oldSizes = collections.defaultdict(int)
+    newSizes = collections.defaultdict(int)
+    for name in oldFiles:
+        readSizes(oldSizes, name, True, False)
+    for name in newFiles:
+        readSizes(newSizes, name, True, False)
+    return (oldSizes, newSizes)
