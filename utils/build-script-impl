@@ -1297,6 +1297,32 @@ function set_swiftpm_bootstrap_command() {
     fi
 }
 
+function install_xctest() {
+    if [[ $(true_false "$1") == "TRUE" ]]; then
+        xctest_extra_flags = "--test"
+    else
+        xctest_extra_flags = ""
+    fi
+
+    LIB_TARGET="linux"
+    if [[ $(uname -s) == "FreeBSD" ]]; then
+        LIB_TARGET="freebsd"
+    fi
+    if [[ $(uname -s) == "Darwin" ]]; then
+        LIB_TARGET="macosx"
+    fi
+    XCTEST_INSTALL_PREFIX="${INSTALL_DESTDIR}"/"${INSTALL_PREFIX}"/lib/swift/"${LIB_TARGET}"
+    echo "--- Installing ${product} ---"
+    set -x
+    "${XCTEST_SOURCE_DIR}"/build_script.py --swiftc="${SWIFTC_BIN}" \
+                        --build-dir="${build_dir}" \
+                        --library-install-path="${XCTEST_INSTALL_PREFIX}" \
+                        --module-install-path="${XCTEST_INSTALL_PREFIX}"/"${SWIFT_HOST_VARIANT_ARCH}" \
+                        --swift-build-dir="${SWIFT_BUILD_PATH}" \
+                        ${xctest_extra_flags}
+    { set +x; } 2>/dev/null
+}
+
 mkdir -p "${BUILD_DIR}"
 
 #
@@ -1969,7 +1995,21 @@ for deployment_target in "${STDLIB_DEPLOYMENT_TARGETS[@]}"; do
                 if [[ "${SKIP_TEST_XCTEST}" ]]; then
                     continue
                 fi
-                # FIXME: We don't test xctest, yet...
+                echo "--- Running tests for ${product} ---"
+                if [[ "$(uname -s)" == "Darwin" ]] ; then
+                    set -x
+                    xcodebuild \
+                        -project "${XCTEST_SOURCE_DIR}"/XCTest.xcodeproj \
+                        -scheme SwiftXCTestFunctionalTests
+                    { set +x; } 2>/dev/null
+                else
+                    if [[ -z "${INSTALL_XCTEST}" ]] ; then
+                        echo "Skipping tests for XCTest. You must also specify --install-xctest in order to test XCTest."
+                        continue
+                    fi
+                    $(install_xctest true)
+                fi
+                echo "--- Finished tests for ${product} ---"
                 continue
                 ;;
             foundation)
@@ -2098,23 +2138,7 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
                 if [[ -z "${INSTALL_XCTEST}" ]] ; then
                     continue
                 fi
-                LIB_TARGET="linux"
-                if [[ $(uname -s) == "FreeBSD" ]]; then
-                    LIB_TARGET="freebsd"
-                fi
-                if [[ $(uname -s) == "Darwin" ]]; then
-                    LIB_TARGET="macosx"
-                fi
-                XCTEST_INSTALL_PREFIX="${INSTALL_DESTDIR}"/"${INSTALL_PREFIX}"/lib/swift/"${LIB_TARGET}"
-                echo "--- Installing ${product} ---"
-                set -x
-                "${XCTEST_SOURCE_DIR}"/build_script.py --swiftc="${SWIFTC_BIN}" \
-                                    --build-dir="${build_dir}" \
-                                    --library-install-path="${XCTEST_INSTALL_PREFIX}" \
-                                    --module-install-path="${XCTEST_INSTALL_PREFIX}"/"${SWIFT_HOST_VARIANT_ARCH}" \
-                                    --swift-build-dir="${SWIFT_BUILD_PATH}"
-                { set +x; } 2>/dev/null
-                
+                $(install_xctest false)
                 # As XCTest installation is self-contained, we break early here.
                 continue
                 ;;
