@@ -359,48 +359,25 @@ swift_common_cxx_warnings()
 
 #
 # Configure SDKs.
+# First, we determine the host platform settings.
 #
+set(swift_can_crosscompile_stdlib TRUE)
 
-function(is_sdk_requested name result_var_name)
-  if("${SWIFT_HOST_VARIANT_SDK}" STREQUAL "${name}")
-    set("${result_var_name}" "TRUE" PARENT_SCOPE)
-  else()
-    if("${SWIFT_SDKS}" STREQUAL "")
-      set("${result_var_name}" "TRUE" PARENT_SCOPE)
-    else()
-      list(FIND SWIFT_SDKS "${name}" sdk_index)
-      if(${sdk_index} EQUAL -1)
-        set("${result_var_name}" "FALSE" PARENT_SCOPE)
-      else()
-        set("${result_var_name}" "TRUE" PARENT_SCOPE)
-      endif()
-    endif()
-  endif()
-endfunction()
-
-# FIXME: separate the notions of SDKs used for compiler tools and target
-# binaries.
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   set(CMAKE_EXECUTABLE_FORMAT "ELF")
-
   set(SWIFT_HOST_VARIANT "linux" CACHE STRING
       "Deployment OS for Swift host tools (the compiler) [linux].")
-
   set(SWIFT_HOST_VARIANT_SDK "LINUX")
   set(SWIFT_PRIMARY_VARIANT_SDK_default "LINUX")
 
-  # FIXME: This will not work while trying to cross-compile.
   if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
-    configure_sdk_unix(LINUX "Linux" "linux" "linux" "x86_64" "x86_64-unknown-linux-gnu")
     set(SWIFT_HOST_VARIANT_ARCH "x86_64")
     set(SWIFT_PRIMARY_VARIANT_ARCH_default "x86_64")
   # FIXME: This only matches ARMv7l (by far the most common variant).
   elseif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "armv7l")
-    configure_sdk_unix(LINUX "Linux" "linux" "linux" "armv7" "armv7-unknown-linux-gnueabihf")
     set(SWIFT_HOST_VARIANT_ARCH "armv7")
     set(SWIFT_PRIMARY_VARIANT_ARCH_default "armv7")
   elseif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
-    configure_sdk_unix(LINUX "Linux" "linux" "linux" "aarch64" "aarch64-unknown-linux-gnu")
     set(SWIFT_HOST_VARIANT_ARCH "aarch64")
     set(SWIFT_PRIMARY_VARIANT_ARCH_default "aarch64")
   else()
@@ -408,33 +385,23 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   endif()
 
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
-  # FIXME: Using the host OS version won't produce correct results for
-  # cross-compilation.
-  string(REPLACE "[-].*" "" FREEBSD_SYSTEM_VERSION ${CMAKE_SYSTEM_VERSION})
-  message(STATUS "FreeBSD Version: ${FREEBSD_SYSTEM_VERSION}")
-  configure_sdk_unix(FREEBSD "FreeBSD" "freebsd" "freebsd" "x86_64"
-    "x86_64-unknown-freebsd${FREEBSD_SYSTEM_VERSION}")
-
   set(CMAKE_EXECUTABLE_FORMAT "ELF")
-
   set(SWIFT_HOST_VARIANT "freebsd" CACHE STRING
       "Deployment OS for Swift host tools (the compiler) [freebsd].")
-
   set(SWIFT_HOST_VARIANT_SDK "FREEBSD")
   set(SWIFT_HOST_VARIANT_ARCH "x86_64")
-
   set(SWIFT_PRIMARY_VARIANT_SDK_default "FREEBSD")
   set(SWIFT_PRIMARY_VARIANT_ARCH_default "x86_64")
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
-  # Set defaults.
 
+elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
   set(SWIFT_HOST_VARIANT "macosx" CACHE STRING
       "Deployment OS for Swift host tools (the compiler) [macosx, iphoneos].")
-
   set(SWIFT_HOST_VARIANT_SDK "OSX" CACHE STRING
       "Deployment sdk for Swift host tools (the compiler).")
   set(SWIFT_HOST_VARIANT_ARCH "x86_64" CACHE STRING
       "Deployment arch for Swift host tools (the compiler).")
+  set(SWIFT_PRIMARY_VARIANT_SDK_default "OSX")
+  set(SWIFT_PRIMARY_VARIANT_ARCH_default "x86_64")
 
   # Display Xcode toolchain version. 
   # The SDK configuration below prints each SDK version.
@@ -446,16 +413,6 @@ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
   message(STATUS "${xcode_version}")
   message(STATUS "")
 
-  is_sdk_requested(OSX swift_build_osx)
-  if(swift_build_osx)
-    configure_sdk_darwin(
-        OSX "OS X" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_OSX}"
-        macosx macosx macosx "x86_64")
-    configure_target_variant(OSX-DA "OS X Debug+Asserts"   OSX DA "Debug+Asserts")
-    configure_target_variant(OSX-RA "OS X Release+Asserts" OSX RA "Release+Asserts")
-    configure_target_variant(OSX-R  "OS X Release"         OSX R  "Release")
-  endif()
-
   if(XCODE)
     # FIXME: Cannot cross-compile stdlib using Xcode.  Xcode insists on
     # passing -mmacosx-version-min to the compiler, and we want to pass
@@ -464,88 +421,113 @@ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
   else()
     set(swift_can_crosscompile_stdlib TRUE)
   endif()
+endif()
 
-  is_sdk_requested(IOS swift_build_ios)
-  if(swift_build_ios AND ${swift_can_crosscompile_stdlib})
-    configure_sdk_darwin(
-        IOS "iOS" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_IOS}"
-        iphoneos ios ios "armv7;armv7s;arm64")
-    configure_target_variant(IOS-DA "iOS Debug+Asserts"   IOS DA "Debug+Asserts")
-    configure_target_variant(IOS-RA "iOS Release+Asserts" IOS RA "Release+Asserts")
-    configure_target_variant(IOS-R  "iOS Release"         IOS R "Release")
-  endif()
+#
+# Add build targets based on the requested SDK targets.
+#
+if("${SWIFT_STDLIB_LINUX_X86_64}")
+  configure_sdk_unix(LINUX "Linux" "linux" "linux" "x86_64" "x86_64-unknown-linux-gnu")
+endif()
 
-  is_sdk_requested(IOS_SIMULATOR swift_build_ios_simulator)
-  if(swift_build_ios_simulator AND ${swift_can_crosscompile_stdlib})
-    configure_sdk_darwin(
-        IOS_SIMULATOR "iOS Simulator" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_IOS}"
-        iphonesimulator ios-simulator ios "i386;x86_64")
-    configure_target_variant(
-        IOS_SIMULATOR-DA "iOS Debug+Asserts"   IOS_SIMULATOR DA "Debug+Asserts")
-    configure_target_variant(
-        IOS_SIMULATOR-RA "iOS Release+Asserts" IOS_SIMULATOR RA "Release+Asserts")
-    configure_target_variant(
-        IOS_SIMULATOR-R  "iOS Release"         IOS_SIMULATOR R "Release")
-  endif()
+if("${SWIFT_STDLIB_LINUX_ARMV7}")
+  configure_sdk_unix(LINUX "Linux" "linux" "linux" "armv7" "armv7-unknown-linux-gnueabihf")
+endif()
 
-  is_sdk_requested(TVOS swift_build_tvos)
-  if(swift_build_tvos AND ${swift_can_crosscompile_stdlib})
-    configure_sdk_darwin(
-        TVOS "tvOS" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_TVOS}"
-        appletvos tvos tvos "arm64")
-    configure_target_variant(TVOS-DA "tvOS Debug+Asserts"   TVOS DA "Debug+Asserts")
-    configure_target_variant(TVOS-RA "tvOS Release+Asserts" TVOS RA "Release+Asserts")
-    configure_target_variant(TVOS-R  "tvOS Release"         TVOS R "Release")
-  endif()
+if("${SWIFT_STDLIB_LINUX_AARCH64}")
+  configure_sdk_unix(LINUX "Linux" "linux" "linux" "aarch64" "aarch64-unknown-linux-gnu")
+endif()
 
-  is_sdk_requested(TVOS_SIMULATOR swift_build_tvos_simulator)
-  if(swift_build_tvos_simulator AND ${swift_can_crosscompile_stdlib})
-    configure_sdk_darwin(
-        TVOS_SIMULATOR "tvOS Simulator" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_TVOS}"
-        appletvsimulator tvos-simulator tvos "x86_64")
-    configure_target_variant(
-      TVOS_SIMULATOR-DA "tvOS Debug+Asserts"   TVOS_SIMULATOR DA "Debug+Asserts")
-    configure_target_variant(
-      TVOS_SIMULATOR-RA "tvOS Release+Asserts" TVOS_SIMULATOR RA "Release+Asserts")
-    configure_target_variant(
-      TVOS_SIMULATOR-R  "tvOS Release"         TVOS_SIMULATOR R "Release")
-  endif()
+if("${SWIFT_STDLIB_MACOSX_X86_64}")
+  configure_sdk_darwin(
+    OSX "OS X" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_OSX}"
+    macosx macosx macosx "x86_64")
+  configure_target_variant(OSX-DA "OS X Debug+Asserts"   OSX DA "Debug+Asserts")
+  configure_target_variant(OSX-RA "OS X Release+Asserts" OSX RA "Release+Asserts")
+  configure_target_variant(OSX-R  "OS X Release"         OSX R  "Release")
+endif()
 
-  is_sdk_requested(WATCHOS swift_build_watchos)
-  if(swift_build_watchos AND ${swift_can_crosscompile_stdlib})
-    configure_sdk_darwin(
-        WATCHOS "watchOS" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_WATCHOS}"
-        watchos watchos watchos "armv7k")
-    configure_target_variant(WATCHOS-DA "watchOS Debug+Asserts"   WATCHOS DA "Debug+Asserts")
-    configure_target_variant(WATCHOS-RA "watchOS Release+Asserts" WATCHOS RA "Release+Asserts")
-    configure_target_variant(WATCHOS-R  "watchOS Release"         WATCHOS R "Release")
-  endif()
+set(iphonesimulator_archs "")
+if("${SWIFT_STDLIB_IPHONESIMULATOR_X86_64}")
+  set(iphonesimulator_archs "x86_64")
+endif()
+if("${SWIFT_STDLIB_IPHONESIMULATOR_I386}")
+  set(iphonesimulator_archs "${iphonesimulator_archs};i386")
+endif()
+if(NOT "${iphonesimulator_archs}" STREQUAL "" AND ${swift_can_crosscompile_stdlib})
+  configure_sdk_darwin(
+    IOS_SIMULATOR "iOS Simulator" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_IOS}"
+    iphonesimulator ios-simulator ios "${iphonesimulator_archs}")
+  configure_target_variant(
+      IOS_SIMULATOR-DA "iOS Debug+Asserts"   IOS_SIMULATOR DA "Debug+Asserts")
+  configure_target_variant(
+      IOS_SIMULATOR-RA "iOS Release+Asserts" IOS_SIMULATOR RA "Release+Asserts")
+  configure_target_variant(
+      IOS_SIMULATOR-R  "iOS Release"         IOS_SIMULATOR R "Release")
+endif()
 
-  is_sdk_requested(WATCHOS_SIMULATOR swift_build_watchos_simulator)
-  if(swift_build_watchos_simulator AND ${swift_can_crosscompile_stdlib})
-    configure_sdk_darwin(
-        WATCHOS_SIMULATOR "watchOS Simulator" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_WATCHOS}"
-        watchsimulator watchos-simulator watchos "i386")
-    configure_target_variant(WATCHOS_SIMULATOR-DA "watchOS Debug+Asserts"   WATCHOS_SIMULATOR DA "Debug+Asserts")
-    configure_target_variant(WATCHOS_SIMULATOR-RA "watchOS Release+Asserts" WATCHOS_SIMULATOR RA "Release+Asserts")
-    configure_target_variant(WATCHOS_SIMULATOR-R  "watchOS Release"         WATCHOS_SIMULATOR R "Release")
-  endif()
+if("${SWIFT_STDLIB_APPLETVSIMULATOR_X86_64}" AND ${swift_can_crosscompile_stdlib})
+  configure_sdk_darwin(
+    TVOS_SIMULATOR "tvOS Simulator" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_TVOS}"
+    appletvsimulator tvos-simulator tvos "x86_64")
+  configure_target_variant(
+    TVOS_SIMULATOR-DA "tvOS Debug+Asserts"   TVOS_SIMULATOR DA "Debug+Asserts")
+  configure_target_variant(
+    TVOS_SIMULATOR-RA "tvOS Release+Asserts" TVOS_SIMULATOR RA "Release+Asserts")
+  configure_target_variant(
+    TVOS_SIMULATOR-R  "tvOS Release"         TVOS_SIMULATOR R "Release")
+endif()
 
-  # FIXME: guess target variant based on the host.
-  # if(SWIFT_HOST_VARIANT MATCHES "^macosx")
-  #   set(SWIFT_PRIMARY_VARIANT_GUESS "OSX-R")
-  # elseif(SWIFT_HOST_VARIANT MATCHES "^iphoneos")
-  #   set(SWIFT_PRIMARY_VARIANT_GUESS "IOS-R")
-  # else()
-  #   message(FATAL_ERROR "Unknown SWIFT_HOST_VARIANT '${SWIFT_HOST_VARIANT}'")
-  # endif()
-  #
-  # set(SWIFT_PRIMARY_VARIANT ${SWIFT_PRIMARY_VARIANT_GUESS} CACHE STRING
-  #    "[OSX-DA, OSX-RA, OSX-R, IOS-DA, IOS-RA, IOS-R, IOS_SIMULATOR-DA, IOS_SIMULATOR-RA, IOS_SIMULATOR-R]")
-  #
-  # FIXME: hardcode OS X as the default variant for now.
-  set(SWIFT_PRIMARY_VARIANT_SDK_default "OSX")
-  set(SWIFT_PRIMARY_VARIANT_ARCH_default "x86_64")
+if("${SWIFT_STDLIB_WATCHSIMULATOR_I386}" AND ${swift_can_crosscompile_stdlib})
+  configure_sdk_darwin(
+    WATCHOS_SIMULATOR "watchOS Simulator" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_WATCHOS}"
+    watchsimulator watchos-simulator watchos "i386")
+  configure_target_variant(WATCHOS_SIMULATOR-DA "watchOS Debug+Asserts"   WATCHOS_SIMULATOR DA "Debug+Asserts")
+  configure_target_variant(WATCHOS_SIMULATOR-RA "watchOS Release+Asserts" WATCHOS_SIMULATOR RA "Release+Asserts")
+  configure_target_variant(WATCHOS_SIMULATOR-R  "watchOS Release"         WATCHOS_SIMULATOR R "Release")
+endif()
+
+set(iphoneos_archs "")
+if("${SWIFT_STDLIB_IPHONEOS_ARM64}")
+  set(iphoneos_archs "arm64")
+endif()
+if("${SWIFT_STDLIB_IPHONEOS_ARMV7}")
+  set(iphoneos_archs "${iphoneos_archs};armv7;armv7s")
+endif()
+if(NOT "${iphoneos_archs}" STREQUAL "" AND ${swift_can_crosscompile_stdlib})
+  configure_sdk_darwin(
+    IOS "iOS" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_IOS}"
+    iphoneos ios ios "${iphoneos_archs}")
+  configure_target_variant(IOS-DA "iOS Debug+Asserts"   IOS DA "Debug+Asserts")
+  configure_target_variant(IOS-RA "iOS Release+Asserts" IOS RA "Release+Asserts")
+  configure_target_variant(IOS-R  "iOS Release"         IOS R "Release")
+endif()
+
+if("${SWIFT_STDLIB_APPLETVOS_ARM64}" AND ${swift_can_crosscompile_stdlib})
+  configure_sdk_darwin(
+    TVOS "tvOS" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_TVOS}"
+    appletvos tvos tvos "arm64")
+  configure_target_variant(TVOS-DA "tvOS Debug+Asserts"   TVOS DA "Debug+Asserts")
+  configure_target_variant(TVOS-RA "tvOS Release+Asserts" TVOS RA "Release+Asserts")
+  configure_target_variant(TVOS-R  "tvOS Release"         TVOS R "Release")
+endif()
+
+if("${SWIFT_STDLIB_WATCHOS_ARMV7K}" AND ${swift_can_crosscompile_stdlib})
+  configure_sdk_darwin(
+    WATCHOS "watchOS" "${SWIFT_DARWIN_DEPLOYMENT_VERSION_WATCHOS}"
+    watchos watchos watchos "armv7k")
+  configure_target_variant(WATCHOS-DA "watchOS Debug+Asserts"   WATCHOS DA "Debug+Asserts")
+  configure_target_variant(WATCHOS-RA "watchOS Release+Asserts" WATCHOS RA "Release+Asserts")
+  configure_target_variant(WATCHOS-R  "watchOS Release"         WATCHOS R "Release")
+endif()
+
+if("${SWIFT_STDLIB_FREEBSD_X86_64}")
+  # FIXME: Using the host OS version won't produce correct results for
+  # cross-compilation.
+  string(REPLACE "[-].*" "" FREEBSD_SYSTEM_VERSION ${CMAKE_SYSTEM_VERSION})
+  message(STATUS "FreeBSD Version: ${FREEBSD_SYSTEM_VERSION}")
+  configure_sdk_unix(FREEBSD "FreeBSD" "freebsd" "freebsd" "x86_64"
+    "x86_64-unknown-freebsd${FREEBSD_SYSTEM_VERSION}")
 endif()
 
 if("${SWIFT_PRIMARY_VARIANT_SDK}" STREQUAL "")
