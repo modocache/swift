@@ -806,6 +806,11 @@ case "$(uname -s -m)" in
         ;;
 esac
 
+if [[ ! -z "${NATIVE_LLVM_TOOLS_PATH}" && ! -z "${NATIVE_CLANG_TOOLS_PATH}" && !  -z "${NATIVE_SWIFT_TOOLS_PATH}" ]] ; then
+    echo "GOT NATIVE TOOLS YEAH"
+    NATIVE_TOOLS_DEPLOYMENT_TARGETS=()
+fi
+
 # Sanitize the list of cross-compilation targets.
 for t in ${CROSS_COMPILE_TOOLS_DEPLOYMENT_TARGETS} ; do
     case ${t} in
@@ -1377,6 +1382,9 @@ fi
 # Start with native deployment targets because the resulting tools are used during cross-compilation.
 for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_DEPLOYMENT_TARGETS[@]}"; do
     set_deployment_target_based_options
+    
+    echo "building dep target ${deployment_target}"
+
 
     case "${COMPILER_VENDOR}" in
         none)
@@ -1518,6 +1526,7 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
 
         case ${product} in
             cmark)
+                echo "config build cmark"
                 cmake_options=(
                   "${cmake_options[@]}"
                   -DCMAKE_BUILD_TYPE:STRING="${LLVM_BUILD_TYPE}"
@@ -1533,7 +1542,13 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
                 if [ "${BUILD_LLVM}" == "0" ] ; then
                     build_targets=(clean)
                 fi
+                set -x
+                echo "taco llvm ${SKIP_BUILD_LLVM}, ${BUILD_SWIFT_TOOLS},"
                 if [ "${SKIP_BUILD_LLVM}" ] ; then
+                    if [[  $(true_false "${BUILD_SWIFT_TOOLS}") == "FALSE" ]] ; then
+                        skip_build=1
+                    fi
+
                     # We can't skip the build completely because the standalone
                     # build of Swift depend on these.
                     build_targets=(llvm-config llvm-tblgen clang-headers)
@@ -1863,6 +1878,8 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
         fi
 
         # Configure if necessary.
+        if [[ ! "${skip_build}" ]]; then
+        echo "configure ${product} - ${skip_build}"
         if [[  "${RECONFIGURE}" || ! -f "${build_dir}/CMakeCache.txt" || \
                     ( ! -z "${generator_output_path}" && ! -f "${generator_output_path}" ) ]] ; then
             mkdir -p "${build_dir}"
@@ -1870,8 +1887,10 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
             (cd "${build_dir}" && "${CMAKE}" "${cmake_options[@]}" ${USER_CONFIG_ARGS})
             { set +x; } 2>/dev/null
         fi
+        fi
 
         # Build.
+        echo "real build ${product} - ${skip_build}"
         if [[ ! "${skip_build}" ]]; then
             if [[ "${CMAKE_GENERATOR}" == "Xcode" ]] ; then
                 # Xcode generator uses "ALL_BUILD" instead of "all".
