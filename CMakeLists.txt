@@ -301,7 +301,7 @@ else()
 endif()
 
 if(NOT EXISTS "${CLANG_MAIN_INCLUDE_DIR}/clang/AST/Decl.h")
-  message(FATAL_ERROR "Clang is missing from llvm/tools subdirectory.")
+  message(STATUS "Clang is missing from llvm/tools subdirectory.")
 endif()
 
 # This could be computed using ${CMAKE_CFG_INTDIR} if we want to link Swift
