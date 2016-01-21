@@ -46,6 +46,7 @@ string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION
   "${LLVM_PACKAGE_VERSION}")
 
 if(SWIFT_BUILT_STANDALONE)
+    message("shims yo ${LLVM_LIBRARY_DIR}, ${CLANG_VERSION}, ")
   set(clang_headers_locations
       "${LLVM_LIBRARY_DIR}/clang/${CLANG_VERSION}"
 

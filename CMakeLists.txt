@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12)
 
+message("in the beginning yo ${LLVM_LIBRARY_DIR}, ${CLANG_VERSION}, ")
 # Add path for custom CMake modules.
 list(APPEND CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
@@ -296,8 +297,10 @@ include(SwiftSharedCMakeConfig)
 # external library.
 if(SWIFT_BUILT_STANDALONE)
   swift_common_standalone_build_config(SWIFT SWIFT_CROSS_COMPILING)
+message("cactus-1 yo ${LLVM_LIBRARY_DIR}, ${CLANG_VERSION}, ")
 else()
   swift_common_unified_build_config(SWIFT)
+message("cactus-2 yo ${LLVM_LIBRARY_DIR}, ${CLANG_VERSION}, ")
 endif()
 
 if(NOT EXISTS "${CLANG_MAIN_INCLUDE_DIR}/clang/AST/Decl.h")
@@ -309,6 +312,8 @@ endif()
 # flexible and allow linking a debug Swift against optimized LLVM.
 set(LLVM_RUNTIME_OUTPUT_INTDIR "${LLVM_BINARY_DIR}")
 set(LLVM_LIBRARY_OUTPUT_INTDIR "${LLVM_LIBRARY_DIR}")
+
+message("cactus1 yo ${LLVM_LIBRARY_DIR}, ${CLANG_VERSION}, ")
 
 set(SWIFT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(SWIFT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")

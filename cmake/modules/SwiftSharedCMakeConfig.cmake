@@ -113,11 +113,17 @@ macro(swift_common_standalone_build_config product is_cross_compiling)
 
   if(${is_cross_compiling})
     # Can't run llvm-config from the cross-compiled LLVM.
-    set(LLVM_TOOLS_BINARY_DIR "" CACHE PATH "Path to llvm/bin")
-    set(LLVM_LIBRARY_DIR "" CACHE PATH "Path to llvm/lib")
-    set(LLVM_MAIN_INCLUDE_DIR "" CACHE PATH "Path to llvm/include")
-    set(LLVM_BINARY_DIR "" CACHE PATH "Path to LLVM build tree")
+    #set(LLVM_TOOLS_BINARY_DIR "" CACHE PATH "Path to llvm/bin")
+    #set(LLVM_LIBRARY_DIR "" CACHE PATH "Path to llvm/lib")
+    #set(LLVM_MAIN_INCLUDE_DIR "" CACHE PATH "Path to llvm/include")
+    #set(LLVM_BINARY_DIR "" CACHE PATH "Path to LLVM build tree")
+    #set(LLVM_MAIN_SRC_DIR "" CACHE PATH "Path to LLVM source tree")
+    set(LLVM_TOOLS_BINARY_DIR "/Users/tbirch/src/swift-android/build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin" CACHE PATH "Path to llvm/bin")
+    set(LLVM_LIBRARY_DIR "/Users/tbirch/src/swift-android/build/Ninja-ReleaseAssert/llvm-macosx-x86_64/lib"  CACHE PATH "Path to llvm/lib")
+    set(LLVM_MAIN_INCLUDE_DIR "/Users/tbirch/src/swift-android/build/Ninja-ReleaseAssert/llvm-macosx-x86_64/include" CACHE PATH "Path to llvm/include")
+    set(LLVM_BINARY_DIR "/Users/tbirch/src/swift-android/build/Ninja-ReleaseAssert/llvm-macosx-x86_64" CACHE PATH "Path to LLVM build tree")
     set(LLVM_MAIN_SRC_DIR "" CACHE PATH "Path to LLVM source tree")
+    message("cactus-conf yo ${LLVM_LIBRARY_DIR}, ${CLANG_VERSION}, ")
   else()
     # Rely on llvm-config.
     _swift_llvm_config_info(
@@ -270,6 +276,7 @@ macro(swift_common_standalone_build_config product is_cross_compiling)
     find_package(Doxygen REQUIRED)
   endif()
   endif ()
+    message("cactus-conf end yo ${LLVM_LIBRARY_DIR}, ${CLANG_VERSION}, ")
 endmacro()
 
 # Common cmake project config for unified builds.
