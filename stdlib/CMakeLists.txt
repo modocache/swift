@@ -14,7 +14,7 @@ add_custom_target(swift-stdlib ALL
     DEPENDS "swift-stdlib${SWIFT_PRIMARY_VARIANT_SUFFIX}")
 
 if(SWIFT_HOST_VARIANT STREQUAL "linux")
-  find_package(BSD REQUIRED)
+  #find_package(BSD REQUIRED)
 endif()
 
 add_subdirectory(public)

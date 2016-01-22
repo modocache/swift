@@ -874,6 +874,8 @@ case "$(uname -s -m)" in
             "iphoneos-armv7"
             "appletvos-arm64"
             "watchos-armv7k"
+
+            "android-armv7"
         )
         ;;
 
@@ -1028,6 +1030,8 @@ for deployment_target in "${STDLIB_DEPLOYMENT_TARGETS[@]}"; do
             exit 1
             ;;
     esac
+    set -x
+
     if [[ "${build_for_this_target}" ]] ; then
         SWIFT_STDLIB_TARGETS=(
             "${SWIFT_STDLIB_TARGETS[@]}" "swift-stdlib-${deployment_target}")
@@ -1463,15 +1467,13 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
         unset skip_build
         build_dir=$(build_directory ${deployment_target} ${product})
         build_targets=(all)
-        cmake_options=("${COMMON_CMAKE_OPTIONS[@]}")
 
         if [[ $(is_cross_tools_deployment_target ${deployment_target}) ]] ; then
         # TODO(tom) customise per target
             COMMON_C_FLAGS="-B /Users/tbirch/src/android-ndk-r10e/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/arm-linux-androideabi/bin/"
-            COMMON_CXX_FLAGS="-isystem /Users/tbirch/src/android-ndk-r10e/sources/cxx-stl/llvm-libc++/libcxx/include"
             
-            cmake_options=(
-                "${cmake_options[@]}"
+            COMMON_CMAKE_OPTIONS=(
+                "${COMMON_CMAKE_OPTIONS[@]}"
                 -DCMAKE_TOOLCHAIN_FILE="/Users/tbirch/Toolchain-android.cmake"
                 -DCMAKE_EXE_LINKER_FLAGS="-lc++_shared"
                 -DCMAKE_SHARED_LINKER_FLAGS="-lc++_shared"
@@ -1493,6 +1495,8 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
                 -DCMAKE_CXX_COMPILER:PATH="${HOST_CXX}"
             )
         fi
+
+        cmake_options=("${COMMON_CMAKE_OPTIONS[@]}")
 
         # Add in gold linker support if requested.
         if [[ "${USE_GOLD_LINKER}" ]]; then
@@ -1693,6 +1697,8 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
                     )
                 fi
 
+                set -x
+                echo "build  yo ${SWIFT_STDLIB_TARGETS[@]}"
                 build_targets=(all "${SWIFT_STDLIB_TARGETS[@]}")
                 if [[ $(true_false "${build_perf_testsuite_this_time}") == "TRUE" ]]; then
                     native_swift_tools_path=$(build_directory macosx-x86_64 swift)/bin

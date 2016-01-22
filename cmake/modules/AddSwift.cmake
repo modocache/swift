@@ -179,7 +179,6 @@ function(_add_variant_link_flags
         "-Wl,-Bsymbolic"
         "-ldl"
         "-L${SWIFT_ANDROID_NDK_PATH}/toolchains/arm-linux-androideabi-4.8/prebuilt/linux-x86_64/lib/gcc/arm-linux-androideabi/4.8"
-        "${SWIFT_ANDROID_NDK_PATH}/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/libc++_shared.so"
         "-L${CMAKE_SOURCE_DIR}/../libiconv-libicu-android/armeabi-v7a")
   else()
     list(APPEND result "-lobjc")
@@ -306,6 +305,8 @@ function(_compile_swift_files dependency_target_out_var_name)
   # Allow import of other Swift modules we just built.
   list(APPEND swift_flags
       "-I" "${SWIFTLIB_DIR}/${library_subdir}")
+  list(APPEND swift_flags
+      "-I" "${SWIFTLIB_DIR}")
   # FIXME: should we use '-resource-dir' here?  Seems like it has no advantage
   # over '-I' in this case.
 

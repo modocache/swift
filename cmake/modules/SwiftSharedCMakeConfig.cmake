@@ -158,15 +158,13 @@ macro(swift_common_standalone_build_config product is_cross_compiling)
 
   set(LLVMCONFIG_FILE "${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
   if(NOT EXISTS ${LLVMCONFIG_FILE})
-    message(STATUS "Not found: ${LLVMCONFIG_FILE}")
+    message(FATAL_ERROR "Not found: ${LLVMCONFIG_FILE}")
   endif()
 
   # Save and restore variables that LLVM configuration overrides.
   set(LLVM_TOOLS_BINARY_DIR_saved "${LLVM_TOOLS_BINARY_DIR}")
   set(LLVM_ENABLE_ASSERTIONS_saved "${LLVM_ENABLE_ASSERTIONS}")
-  if(EXISTS ${LLVMCONFIG_FILE})
-      include(${LLVMCONFIG_FILE})
-  endif()
+  include(${LLVMCONFIG_FILE})
   set(LLVM_TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR_saved}")
   set(LLVM_ENABLE_ASSERTIONS "${LLVM_ENABLE_ASSERTIONS_saved}")
 
@@ -207,7 +205,7 @@ macro(swift_common_standalone_build_config product is_cross_compiling)
   elseif(EXISTS "${${product}_PATH_TO_CLANG_BUILD}/tools/clang/include/clang/Basic/Version.inc")
     set(CLANG_BUILD_INCLUDE_DIR "${${product}_PATH_TO_CLANG_BUILD}/tools/clang/include")
   else()
-    message(STATUS "Please set ${product}_PATH_TO_CLANG_BUILD to a directory containing a Clang build.")
+    message(FATAL_ERROR "Please set ${product}_PATH_TO_CLANG_BUILD to a directory containing a Clang build.")
   endif()
   if(CLANG_MAIN_INCLUDE_DIR)
     get_filename_component(CLANG_MAIN_SRC_DIR ${${product}_PATH_TO_CLANG_SOURCE}
@@ -223,10 +221,9 @@ macro(swift_common_standalone_build_config product is_cross_compiling)
 
   set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS")
 
-  if(NOT ${is_cross_compiling})
-    include(AddLLVM)
-    include(TableGen)
-    include(HandleLLVMOptions)
+  include(AddLLVM)
+  include(TableGen)
+  include(HandleLLVMOptions)
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
   string(REGEX REPLACE "([0-9]+)\\.[0-9]+(\\.[0-9]+)?" "\\1" PACKAGE_VERSION_MAJOR
@@ -275,8 +272,6 @@ macro(swift_common_standalone_build_config product is_cross_compiling)
   if (LLVM_ENABLE_DOXYGEN)
     find_package(Doxygen REQUIRED)
   endif()
-  endif ()
-    message("cactus-conf end yo ${LLVM_LIBRARY_DIR}, ${CLANG_VERSION}, ")
 endmacro()
 
 # Common cmake project config for unified builds.
@@ -368,16 +363,16 @@ endmacro()
 # Common cmake project config for additional warnings.
 #
 # TODO(tom) include HandleLLVMOptions ?
-set(LLVM_PACKAGE_VERSION 3.8.0svn)
-include(CheckCXXCompilerFlag)
-
-function(append_if condition value)
-  if (${condition})
-    foreach(variable ${ARGN})
-      set(${variable} "${${variable}} ${value}" PARENT_SCOPE)
-    endforeach(variable)
-  endif()
-endfunction()
+#set(LLVM_PACKAGE_VERSION 3.8.0svn)
+#include(CheckCXXCompilerFlag)
+#
+#function(append_if condition value)
+#  if (${condition})
+#    foreach(variable ${ARGN})
+#      set(${variable} "${${variable}} ${value}" PARENT_SCOPE)
+#    endforeach(variable)
+#  endif()
+#endfunction()
 
 macro(swift_common_cxx_warnings)
   check_cxx_compiler_flag("-Werror -Wdocumentation" CXX_SUPPORTS_DOCUMENTATION_FLAG)
