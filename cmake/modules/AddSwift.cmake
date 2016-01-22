@@ -147,6 +147,10 @@ function(_add_variant_swift_compile_flags
     list(APPEND result "-D" "INTERNAL_CHECKS_ENABLED")
   endif()
 
+  if("${sdk}" STREQUAL ANDROID)
+      list(APPEND result "-I" "${SWIFT_ANDROID_NDK_PATH}/toolchains/llvm-3.6/prebuilt/darwin-x86_64/lib/clang/3.6/include")
+  endif()
+
   set("${result_var_name}" "${result}" PARENT_SCOPE)
 endfunction()
 
@@ -178,6 +182,7 @@ function(_add_variant_link_flags
     list(APPEND result
         "-Wl,-Bsymbolic"
         "-ldl"
+        "-licuuc" "-licui18n"
         "-L${SWIFT_ANDROID_NDK_PATH}/toolchains/arm-linux-androideabi-4.8/prebuilt/linux-x86_64/lib/gcc/arm-linux-androideabi/4.8"
         "-L${CMAKE_SOURCE_DIR}/../libiconv-libicu-android/armeabi-v7a")
   else()
@@ -1124,9 +1129,9 @@ function(_add_swift_library_single target name)
   # the swift binary: rdar://problem/19007002
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" OR
      "${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
-    list(APPEND link_flags
-        "-Xlinker" "-T"
-        "-Xlinker" "${SWIFTLIB_DIR}/${SWIFTLIB_SINGLE_SUBDIR}/swift.ld")
+    #list(APPEND link_flags
+    #    "-Xlinker" "-T"
+    #    "-Xlinker" "${SWIFTLIB_DIR}/${SWIFTLIB_SINGLE_SUBDIR}/swift.ld")
   endif()
 
   # Convert variables to space-separated strings.
