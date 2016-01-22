@@ -1474,7 +1474,7 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
             
             COMMON_CMAKE_OPTIONS=(
                 "${COMMON_CMAKE_OPTIONS[@]}"
-                -DCMAKE_TOOLCHAIN_FILE="/Users/tbirch/Toolchain-android.cmake"
+                -DCMAKE_TOOLCHAIN_FILE="${HOME}/Toolchain-android.cmake"
                 -DCMAKE_EXE_LINKER_FLAGS="-lc++_shared"
                 -DCMAKE_SHARED_LINKER_FLAGS="-lc++_shared"
                 -DLLVM_NATIVE_BUILD="../llvm-macosx-x86_64/"
