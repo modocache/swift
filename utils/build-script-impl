@@ -1087,22 +1087,6 @@ if [[ "${DISTCC}" ]] ; then
     # On some platforms, 'pump' may be unrelated to distcc, in which case it's
     # called 'distcc-pump'.
     DISTCC_PUMP="$(which distcc-pump || which pump)"
-    COMMON_CMAKE_OPTIONS=(
-        "${COMMON_CMAKE_OPTIONS[@]}"
-        -DCMAKE_C_COMPILER:PATH="$(which distcc)"
-        -DCMAKE_C_COMPILER_ARG1="${HOST_CC}"
-        -DCMAKE_CXX_COMPILER:PATH="$(which distcc)"
-        -DCMAKE_CXX_COMPILER_ARG1="${HOST_CXX}"
-    )
-else
-    COMMON_CMAKE_OPTIONS=(
-        "${COMMON_CMAKE_OPTIONS[@]}"
-        -DCMAKE_C_COMPILER:PATH="${HOST_CC}"
-        -DCMAKE_CXX_COMPILER:PATH="${HOST_CXX}"
-    )
-fi
-
-if [[ "${DISTCC}" ]] ; then
     BUILD_ARGS="${BUILD_ARGS} -j $(distcc -j)"
 fi
 
@@ -1249,7 +1233,7 @@ function common_cross_c_flags() {
             echo "-arch armv7k -mwatchos-version-min=${DARWIN_DEPLOYMENT_VERSION_WATCHOS}"
             ;;
         android-armv7)
-            echo "-arch armv7"
+            echo ""
             ;;
     esac
 }
@@ -1481,6 +1465,35 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
         build_targets=(all)
         cmake_options=("${COMMON_CMAKE_OPTIONS[@]}")
 
+        if [[ $(is_cross_tools_deployment_target ${deployment_target}) ]] ; then
+        # TODO(tom) customise per target
+            COMMON_C_FLAGS="-B /Users/tbirch/src/android-ndk-r10e/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/arm-linux-androideabi/bin/"
+            COMMON_CXX_FLAGS="-isystem /Users/tbirch/src/android-ndk-r10e/sources/cxx-stl/llvm-libc++/libcxx/include"
+            
+            cmake_options=(
+                "${cmake_options[@]}"
+                -DCMAKE_TOOLCHAIN_FILE="/Users/tbirch/Toolchain-android.cmake"
+                -DCMAKE_EXE_LINKER_FLAGS="-lc++_shared"
+                -DCMAKE_SHARED_LINKER_FLAGS="-lc++_shared"
+                -DLLVM_NATIVE_BUILD="../llvm-macosx-x86_64/"
+            )
+
+        elif [[ "${DISTCC}" ]] ; then
+            COMMON_CMAKE_OPTIONS=(
+                "${COMMON_CMAKE_OPTIONS[@]}"
+                -DCMAKE_C_COMPILER:PATH="$(which distcc)"
+                -DCMAKE_C_COMPILER_ARG1="${HOST_CC}"
+                -DCMAKE_CXX_COMPILER:PATH="$(which distcc)"
+                -DCMAKE_CXX_COMPILER_ARG1="${HOST_CXX}"
+            )
+        else
+            COMMON_CMAKE_OPTIONS=(
+                "${COMMON_CMAKE_OPTIONS[@]}"
+                -DCMAKE_C_COMPILER:PATH="${HOST_CC}"
+                -DCMAKE_CXX_COMPILER:PATH="${HOST_CXX}"
+            )
+        fi
+
         # Add in gold linker support if requested.
         if [[ "${USE_GOLD_LINKER}" ]]; then
             echo "${product}: using gold linker"
@@ -1545,10 +1558,6 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
                 set -x
                 echo "taco llvm ${SKIP_BUILD_LLVM}, ${BUILD_SWIFT_TOOLS},"
                 if [ "${SKIP_BUILD_LLVM}" ] ; then
-                    if [[  $(true_false "${BUILD_SWIFT_TOOLS}") == "FALSE" ]] ; then
-                        skip_build=1
-                    fi
-
                     # We can't skip the build completely because the standalone
                     # build of Swift depend on these.
                     build_targets=(llvm-config llvm-tblgen clang-headers)
@@ -1878,15 +1887,12 @@ for deployment_target in "${NATIVE_TOOLS_DEPLOYMENT_TARGETS[@]}" "${CROSS_TOOLS_
         fi
 
         # Configure if necessary.
-        if [[ ! "${skip_build}" ]]; then
-        echo "configure ${product} - ${skip_build}"
         if [[  "${RECONFIGURE}" || ! -f "${build_dir}/CMakeCache.txt" || \
                     ( ! -z "${generator_output_path}" && ! -f "${generator_output_path}" ) ]] ; then
             mkdir -p "${build_dir}"
             set -x
             (cd "${build_dir}" && "${CMAKE}" "${cmake_options[@]}" ${USER_CONFIG_ARGS})
             { set +x; } 2>/dev/null
-        fi
         fi
 
         # Build.
