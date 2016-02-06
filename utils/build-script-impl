@@ -921,11 +921,13 @@ fi
 if [[ ! "${SKIP_BUILD_SWIFTPM}" ]] ; then
      PRODUCTS=("${PRODUCTS[@]}" swiftpm)
 fi
-if [[ ! "${SKIP_BUILD_XCTEST}" ]] ; then
-     PRODUCTS=("${PRODUCTS[@]}" xctest)
-fi
+# XCTest has a dependency upon Foundation. It must be added to the list of
+# products *after* Foundation.
 if [[ ! "${SKIP_BUILD_FOUNDATION}" ]] ; then
      PRODUCTS=("${PRODUCTS[@]}" foundation)
+fi
+if [[ ! "${SKIP_BUILD_XCTEST}" ]] ; then
+     PRODUCTS=("${PRODUCTS[@]}" xctest)
 fi
 if [[ ! "${SKIP_BUILD_LIBDISPATCH}" ]] ; then
      PRODUCTS=("${PRODUCTS[@]}" libdispatch)
@@ -1796,16 +1798,6 @@ for deployment_target in "${HOST_TARGET}" "${CROSS_TOOLS_DEPLOYMENT_TARGETS[@]}"
                 # swiftpm installs itself with a bootstrap method. No further cmake building is performed.
                 continue
                 ;;
-            xctest)
-                SWIFTC_BIN="$(build_directory_bin ${deployment_target} swift)/swiftc"
-                SWIFT_BUILD_PATH="$(build_directory ${deployment_target} swift)"
-                set -x
-                "${XCTEST_SOURCE_DIR}"/build_script.py --swiftc="${SWIFTC_BIN}" --build-dir="${build_dir}" --swift-build-dir="${SWIFT_BUILD_PATH}"
-                { set +x; } 2>/dev/null
-
-                # XCTest builds itself and doesn't rely on cmake
-                continue
-                ;;
             foundation)
                 # the configuration script requires knowing about XCTest's location for building and running the tests
                 XCTEST_BUILD_DIR=$(build_directory ${deployment_target} xctest)
@@ -1829,6 +1821,23 @@ for deployment_target in "${HOST_TARGET}" "${CROSS_TOOLS_DEPLOYMENT_TARGETS[@]}"
                 { set +x; } 2>/dev/null
 
                 # Foundation builds itself and doesn't use cmake
+                continue
+                ;;
+            xctest)
+                if [[ "$(uname -s)" == "Darwin" ]] ; then
+                    set -x
+                    xcodebuild -project "${XCTEST_SOURCE_DIR}"/XCTest.xcodeproj -scheme SwiftXCTest SKIP_INSTALL=NO DEPLOYMENT_LOCATION=YES DSTROOT="${build_dir}" INSTALL_PATH="/"
+                    { set +x; } 2>/dev/null
+                else
+                    SWIFTC_BIN="$(build_directory_bin ${deployment_target} swift)/swiftc"
+                    SWIFT_BUILD_PATH="$(build_directory ${deployment_target} swift)"
+                    FOUNDATION_BUILD_DIR="$(build_directory ${deployment_target} foundation)"/Foundation
+                    set -x
+                    "${XCTEST_SOURCE_DIR}"/build_script.py --swiftc="${SWIFTC_BIN}" --build-dir="${build_dir}" --swift-build-dir="${SWIFT_BUILD_PATH}" --foundation-build-dir="${FOUNDATION_BUILD_DIR}"
+                    { set +x; } 2>/dev/null
+                fi
+
+                # XCTest builds itself and doesn't rely on cmake
                 continue
                 ;;
             libdispatch)
@@ -2017,13 +2026,6 @@ for deployment_target in "${STDLIB_DEPLOYMENT_TARGETS[@]}"; do
                 # As swiftpm tests itself, we break early here.
                 continue
                 ;;
-            xctest)
-                if [[ "${SKIP_TEST_XCTEST}" ]]; then
-                    continue
-                fi
-                # FIXME: We don't test xctest, yet...
-                continue
-                ;;
             foundation)
                 if [[ "${SKIP_TEST_FOUNDATION}" ]]; then
                     continue
@@ -2037,6 +2039,28 @@ for deployment_target in "${STDLIB_DEPLOYMENT_TARGETS[@]}"; do
                 LD_LIBRARY_PATH="${INSTALL_DESTDIR}"/"${INSTALL_PREFIX}"/lib/swift/:"${build_dir}/Foundation":"${XCTEST_BUILD_DIR}":${LD_LIBRARY_PATH} "${build_dir}"/TestFoundation/TestFoundation
                 popd
                 { set +x; } 2>/dev/null
+                echo "--- Finished tests for ${product} ---"
+                continue
+                ;;
+            xctest)
+                if [[ "${SKIP_TEST_XCTEST}" ]]; then
+                    continue
+                fi
+                echo "--- Running tests for ${product} ---"
+                if [[ "$(uname -s)" == "Darwin" ]] ; then
+                    set -x
+                    xcodebuild -project "${XCTEST_SOURCE_DIR}"/XCTest.xcodeproj -scheme SwiftXCTestFunctionalTests
+                    { set +x; } 2>/dev/null
+                else
+                    SWIFTC_BIN="$(build_directory_bin ${deployment_target} swift)/swiftc"
+                    SWIFT_BUILD_PATH="$(build_directory ${deployment_target} swift)"
+                    FOUNDATION_BUILD_PATH="$(build_directory ${deployment_target} foundation)"/Foundation
+                    set -x
+                    # FIXME: This re-builds swift-corelibs-xctest. Instead, 'build_script.py' should take
+                    # a top-level 'test' command that only tests an already built XCTest.
+                    "${XCTEST_SOURCE_DIR}"/build_script.py --swiftc="${SWIFTC_BIN}" --build-dir="${build_dir}" --swift-build-dir="${SWIFT_BUILD_PATH}" --foundation-build-dir="${FOUNDATION_BUILD_PATH}" --test
+                    { set +x; } 2>/dev/null
+                fi
                 echo "--- Finished tests for ${product} ---"
                 continue
                 ;;

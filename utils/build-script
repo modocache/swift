@@ -14,6 +14,7 @@ from __future__ import print_function
 import argparse
 import multiprocessing
 import os
+import platform
 import shutil
 import sys
 import textwrap
@@ -565,6 +566,12 @@ the number of parallel build jobs to use""",
     # Build LLDB if any LLDB-related options were specified.
     if (args.lldb_build_variant is not None or args.lldb_assertions is not None):
         args.build_lldb = True
+
+    # If XCTest is to be built on systems other than OS X, its dependency
+    # Foundation must also be built. This isn't necessary on OS X, since
+    # Foundation is built via xcodebuild.
+    if platform.system() != 'Darwin' and args.build_xctest:
+      args.build_foundation = True
 
     # Set the default build variant.
     if args.build_variant is None:
