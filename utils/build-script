@@ -297,6 +297,10 @@ details of the setups of other systems or automated environments.""")
              "target. The built LLVM and Clang will be used to compile Swift "
              "for the cross-compilation targets.",
         default=swift_build_support.targets.host_target())
+    targets_group.add_argument(
+        "--cross-compile-tools-deployment-targets",
+        help="A list of targets to cross-compile host Swift tools for.",
+        nargs="*")
 
     projects_group = parser.add_argument_group(
         title="Options to select projects")
@@ -559,11 +563,28 @@ the number of parallel build jobs to use""",
         '--darwin-xcrun-toolchain',
         '--cmake',
         '--host-target',
+        '--cross-compile-tools-deployment-targets',
     ]))
+    # Cross-compile deployment targets are represented as a single,
+    # space-separated string. Convert them into a real list.
+    if len(args.cross_compile_tools_deployment_targets) == 1:
+        args.cross_compile_tools_deployment_targets = \
+            args.cross_compile_tools_deployment_targets[0].split()
 
     if args.host_target is None:
         print_with_argv0("Unknown operating system.")
         return 1
+
+    for target in args.cross_compile_tools_deployment_targets:
+        valid_targets = [
+            'iphonesimulator-i386', 'iphonesimulator-x86_64',
+            'iphoneos-arm64', 'iphoneos-armv7',
+            'appletvos-arm64', 'appletvsimulator-x86_64',
+            'watchos-armv7k', 'watchsimulator-i386',
+        ]
+        if target not in valid_targets:
+            print_with_argv0('Unknown deployment target: {}'.format(target))
+            return 1
 
     # Build cmark if any cmark-related options were specified.
     if (args.cmark_build_variant is not None):
@@ -825,6 +846,11 @@ the number of parallel build jobs to use""",
     if args.build_foundation:
         build_script_impl_args += [
             "--foundation-build-type", args.foundation_build_variant
+        ]
+    if args.cross_compile_tools_deployment_targets:
+        build_script_impl_args += [
+            "--cross-compile-tools-deployment-targets",
+            " ".join(args.cross_compile_tools_deployment_targets),
         ]
     build_script_impl_args += build_script_impl_inferred_args
 
