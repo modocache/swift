@@ -712,8 +712,7 @@ for t in ${CROSS_COMPILE_TOOLS_DEPLOYMENT_TARGETS} ; do
         iphonesimulator-i386 | iphonesimulator-x86_64 | \
         iphoneos-arm64 | iphoneos-armv7 | \
         appletvos-arm64 | appletvsimulator-x86_64 | \
-        watchos-armv7k | watchsimulator-i386 | \
-        android-armv7 )
+        watchos-armv7k | watchsimulator-i386)
             CROSS_TOOLS_DEPLOYMENT_TARGETS=(
                 "${CROSS_TOOLS_DEPLOYMENT_TARGETS[@]}"
                 "${t}"
