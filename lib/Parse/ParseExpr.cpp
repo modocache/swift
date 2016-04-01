@@ -154,6 +154,7 @@ ParserResult<Expr> Parser::parseExprAs() {
   if (Tok.is(tok::question_postfix)) {
     questionLoc = consumeToken(tok::question_postfix);
   } else if (Tok.is(tok::exclaim_postfix)) {
+    diagnose(Tok, diag::force_unwrapping_is_like_totally_unsafe);
     exclaimLoc = consumeToken(tok::exclaim_postfix);
   }
 
@@ -397,6 +398,7 @@ ParserResult<Expr> Parser::parseExprSequenceElement(Diag<> message,
   bool hadTry = consumeIf(tok::kw_try, tryLoc);
   Optional<Token> trySuffix;
   if (hadTry && Tok.isAny(tok::exclaim_postfix, tok::question_postfix)) {
+    diagnose(Tok, diag::force_unwrapping_is_like_totally_unsafe);
     trySuffix = Tok;
     consumeToken();
   }
@@ -1376,7 +1378,9 @@ ParserResult<Expr> Parser::parseExprPostfix(Diag<> ID, bool isExprBasic) {
     }
 
     // Check for a ! suffix.
-    if (consumeIf(tok::exclaim_postfix)) {
+    if (Tok.is(tok::exclaim_postfix)) {
+      diagnose(Tok, diag::force_unwrapping_is_like_totally_unsafe);
+      consumeToken(tok::exclaim_postfix);
       Result = makeParserResult(new (Context) ForceValueExpr(Result.get(), 
                                                              TokLoc));
       continue;

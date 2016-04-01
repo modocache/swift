@@ -593,6 +593,7 @@ bool Parser::parseAnyIdentifier(Identifier &Result, SourceLoc &Loc,
   // When we know we're supposed to get an identifier or operator, map the
   // postfix '!' to an operator name.
   if (Tok.is(tok::exclaim_postfix)) {
+    diagnose(Tok, diag::force_unwrapping_is_like_totally_unsafe);
     Result = Context.getIdentifier(Tok.getText());
     Loc = Tok.getLoc();
     consumeToken(tok::exclaim_postfix);

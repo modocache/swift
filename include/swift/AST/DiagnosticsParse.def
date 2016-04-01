@@ -52,6 +52,9 @@ NOTE(opening_angle,none,
 ERROR(extra_rbrace,none,
       "extraneous '}' at top level", ())
 
+ERROR(force_unwrapping_is_like_totally_unsafe,none,
+      "woah now, you're not expecting this to pass code review, are you?", ())
+
 ERROR(unexpected_conditional_compilation_block_terminator,none,
       "unexpected conditional compilation block terminator", ())
 ERROR(expected_conditional_compilation_expression,none,
