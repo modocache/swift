@@ -25,6 +25,7 @@
 
 // RUN: %swiftc_driver -driver-print-jobs -target armv7-none-linux-androideabi -Ffoo -framework bar -Lbaz -lboo -Xlinker -undefined %s 2>&1 > %t.android.txt
 // RUN: FileCheck -check-prefix ANDROID-armv7 %s < %t.android.txt
+// RUN: FileCheck -check-prefix ANDROID-armv7-NEGATIVE %s < %t.android.txt
 
 // RUN: %swiftc_driver -driver-print-jobs -target x86_64-unknown-windows-cygnus -Ffoo -framework bar -Lbaz -lboo -Xlinker -undefined %s 2>&1 > %t.cygwin.txt
 // RUN: FileCheck -check-prefix CYGWIN-x86_64 %s < %t.cygwin.txt
@@ -186,6 +187,7 @@
 // ANDROID-armv7-DAG: -lboo
 // ANDROID-armv7-DAG: -Xlinker -undefined
 // ANDROID-armv7: -o linker
+// ANDROID-armv7-NEGATIVE-NOT: -Xlinker -rpath
 
 // CYGWIN-x86_64: swift
 // CYGWIN-x86_64: -o [[OBJECTFILE:.*]]
