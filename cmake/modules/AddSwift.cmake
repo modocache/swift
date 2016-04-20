@@ -1870,12 +1870,17 @@ endfunction()
 # Additional parameters:
 #   [LINK_FAT_LIBRARIES lipo_target1 ...]
 #     Fat libraries to link with.
+#   [EXCLUDE_SDKS sdk1 ...]
+#     Normally the executable is built for each SDK target. When
+#     cross-compiling for OS X and iOS, for example, the executable is built
+#     for each target. Use this list to prevent the executable from being
+#     built for certain SDK targets.
 function(add_swift_target_executable name)
   # Parse the arguments we were given.
   cmake_parse_arguments(SWIFTEXE_TARGET
     "EXCLUDE_FROM_ALL;DONT_STRIP_NON_MAIN_SYMBOLS;DISABLE_ASLR;BUILD_WITH_STDLIB"
     ""
-    "DEPENDS;COMPONENT_DEPENDS;LINK_FAT_LIBRARIES"
+    "DEPENDS;COMPONENT_DEPENDS;LINK_FAT_LIBRARIES;EXCLUDE_SDKS"
     ${ARGN})
 
   set(SWIFTEXE_TARGET_SOURCES ${SWIFTEXE_TARGET_UNPARSED_ARGUMENTS})
@@ -1901,6 +1906,10 @@ function(add_swift_target_executable name)
   endif()
 
   foreach(sdk ${SWIFT_SDKS})
+    if(";${SWIFTEXE_TARGET_EXCLUDE_SDKS};" MATCHES ";${sdk};")
+      continue()
+    endif()
+
     foreach(arch ${SWIFT_SDK_${sdk}_ARCHITECTURES})
       set(VARIANT_SUFFIX "-${SWIFT_SDK_${sdk}_LIB_SUBDIR}-${arch}")
       set(VARIANT_NAME "${name}${VARIANT_SUFFIX}")
