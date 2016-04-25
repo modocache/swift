@@ -393,6 +393,24 @@ public func sem_open(
 }
 
 //===----------------------------------------------------------------------===//
+// locale.h
+//===----------------------------------------------------------------------===//
+
+public var LC_CTYPE: Int32          { return 0 }
+public var LC_NUMERIC: Int32        { return 1 }
+public var LC_TIME: Int32           { return 2 }
+public var LC_COLLATE: Int32        { return 3 }
+public var LC_MONETARY: Int32       { return 4 }
+public var LC_MESSAGES: Int32       { return 5 }
+public var LC_ALL: Int32            { return 6 }
+public var LC_PAPER: Int32          { return 7 }
+public var LC_NAME: Int32           { return 8 }
+public var LC_ADDRESS: Int32        { return 9 }
+public var LC_TELEPHONE: Int32      { return 10 }
+public var LC_MEASUREMENT: Int32    { return 11 }
+public var LC_IDENTIFICATION: Int32 { return 12 }
+
+//===----------------------------------------------------------------------===//
 // Misc.
 //===----------------------------------------------------------------------===//
 
