@@ -264,14 +264,10 @@ endif()
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "")
   message(FATAL_ERROR "CMAKE_SYSTEM_NAME is empty!")
 endif()
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
-  set(SWIFT_BUILD_SOURCEKIT_default TRUE)
-else()
-  set(SWIFT_BUILD_SOURCEKIT_default FALSE)
-endif()
+
 option(SWIFT_BUILD_SOURCEKIT
     "Build SourceKit"
-    ${SWIFT_BUILD_SOURCEKIT_default})
+    TRUE)
 
 #
 # Include CMake modules
