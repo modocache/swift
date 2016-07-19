@@ -1097,8 +1097,8 @@ void Driver::buildOutputInfo(const ToolChain &TC, const DerivedArgList &Args,
       if (!llvm::sys::fs::exists(OI.SDKPath)) {
         Diags.diagnose(SourceLoc(), diag::warning_no_such_sdk, OI.SDKPath);
       } else if (isSDKTooOld(OI.SDKPath, TC.getTriple())) {
-        Diags.diagnose(SourceLoc(), diag::error_sdk_too_old,
-                       llvm::sys::path::filename(OI.SDKPath));
+        // Diags.diagnose(SourceLoc(), diag::error_sdk_too_old,
+        //                llvm::sys::path::filename(OI.SDKPath));
       }
     }
   }
