@@ -109,23 +109,23 @@ function(_add_variant_c_compile_link_flags)
     list(APPEND result "-fms-compatibility-version=1900")
   endif()
 
-  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
-    
+  if(IS_DARWIN)
+
     # Check if there's a specific iOS deployment version needed for this invocation
     if("${CFLAGS_SDK}" STREQUAL "IOS" OR "${CFLAGS_SDK}" STREQUAL "IOS_SIMULATOR")
       set(DEPLOYMENT_VERSION ${CFLAGS_DEPLOYMENT_VERSION_IOS})
     endif()
-    
+
     if("${DEPLOYMENT_VERSION}" STREQUAL "")
       set(DEPLOYMENT_VERSION "${SWIFT_SDK_${CFLAGS_SDK}_DEPLOYMENT_VERSION}")
     endif()
-    
+
     list(APPEND result
       "-arch" "${CFLAGS_ARCH}"
       "-F" "${SWIFT_SDK_${CFLAGS_SDK}_PATH}/../../../Developer/Library/Frameworks"
       "-m${SWIFT_SDK_${CFLAGS_SDK}_VERSION_MIN_NAME}-version-min=${DEPLOYMENT_VERSION}")
   endif()
-      
+
   if(CFLAGS_ANALYZE_CODE_COVERAGE)
     list(APPEND result "-fprofile-instr-generate"
                        "-fcoverage-mapping")
@@ -225,7 +225,8 @@ function(_add_variant_swift_compile_flags
       "-target" "${SWIFT_SDK_${sdk}_ARCH_${arch}_TRIPLE}"
       "-resource-dir" "${SWIFTLIB_DIR}")
 
-  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+  is_darwin_based_sdk("${sdk}" IS_DARWIN)
+  if(IS_DARWIN)
     list(APPEND result
         "-F" "${SWIFT_SDK_${sdk}_PATH}/../../../Developer/Library/Frameworks")
   endif()
@@ -343,12 +344,18 @@ endfunction()
 #
 # Usage:
 #   _add_swift_lipo_target(
+#     sdk                 # The name of the SDK the target was created for.
+#                         # Examples include "OSX", "IOS", "ANDROID", etc.
 #     target              # The name of the target to create
 #     output              # The file to be created by this target
 #     source_targets...   # The source targets whose outputs will be
 #                         # lipo'd into the output.
 #   )
-function(_add_swift_lipo_target target output)
+function(_add_swift_lipo_target sdk target output)
+  if("${sdk}" STREQUAL "")
+    message(FATAL_ERROR "sdk is required")
+  endif()
+
   if("${target}" STREQUAL "")
     message(FATAL_ERROR "target is required")
   endif()
@@ -372,7 +379,8 @@ function(_add_swift_lipo_target target output)
     endif()
   endforeach()
 
-  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+  is_darwin_based_sdk("${sdk}" IS_DARWIN)
+  if(IS_DARWIN)
     # Use lipo to create the final binary.
     add_custom_command_target(unused_var
         COMMAND "${LIPO}" "-create" "-output" "${output}" ${source_binaries}
@@ -1438,6 +1446,7 @@ function(add_swift_library name)
 
         set(lipo_target "${name}-${SWIFT_SDK_${sdk}_LIB_SUBDIR}")
         _add_swift_lipo_target(
+            "${sdk}"
             ${lipo_target}
             "${UNIVERSAL_LIBRARY_NAME}"
             ${THIN_INPUT_TARGETS})
@@ -1497,6 +1506,7 @@ function(add_swift_library name)
           set(UNIVERSAL_LIBRARY_NAME
               "${SWIFTSTATICLIB_DIR}/${SWIFT_SDK_${sdk}_LIB_SUBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
           _add_swift_lipo_target(
+              "${sdk}"
               ${lipo_target_static}
               "${UNIVERSAL_LIBRARY_NAME}"
               ${THIN_INPUT_TARGETS_STATIC})
@@ -1649,7 +1659,8 @@ function(_add_swift_executable_single name)
     list(APPEND link_flags "-Wl,-no_pie")
   endif()
 
-  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+  is_darwin_based_sdk("${CFLAGS_SDK}" IS_DARWIN)
+  if(IS_DARWIN)
     list(APPEND link_flags
         "-Xlinker" "-rpath"
         "-Xlinker" "@executable_path/../lib/swift/${SWIFT_SDK_${SWIFTEXE_SINGLE_SDK}_LIB_SUBDIR}")
