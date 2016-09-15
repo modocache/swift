@@ -1,14 +1,3 @@
-# FIXME: ICU is only needed on a per-target basis, for targets that are not
-#        Darwin. For example:
-#
-#        - When the host is macOS, and the target is Android, ICU is needed.
-#        - When the host is macOS, and the target is iOS, ICU is not needed.
-#
-#        Currently, no matter this target, this checks the host.
-if(NOT SWIFT_HOST_VARIANT MATCHES "${SWIFT_DARWIN_VARIANTS}")
-  find_package(ICU REQUIRED COMPONENTS uc i18n)
-endif()
-
 set(swift_stubs_sources
     Assert.cpp
     CommandLine.cpp
@@ -47,5 +36,6 @@ add_swift_library(swiftStdlibStubs OBJECT_LIBRARY TARGET_LIBRARY
   LINK_FLAGS ${SWIFT_RUNTIME_CORE_LINK_FLAGS}
   LINK_LIBRARIES ${swift_stubs_link_libraries}
   TARGET_SDKS ANDROID CYGWIN FREEBSD LINUX
-  INSTALL_IN_COMPONENT stdlib)
+  INSTALL_IN_COMPONENT stdlib
+  DEPENDS_ON_ICU)
 
