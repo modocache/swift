@@ -551,23 +551,6 @@ if("${SWIFT_HOST_VARIANT_SDK}" STREQUAL "LINUX")
     set(SWIFT_PRIMARY_VARIANT_ARCH_default "${SWIFT_HOST_VARIANT_ARCH}")
   endif()
 
-  # Compatible cross-compile SDKS for LINUX: ANDROID (arch always armv7)
-  is_sdk_requested(ANDROID swift_build_android)
-  if("${SWIFT_ANDROID_NDK_PATH}" STREQUAL "")
-    set(swift_can_crosscompile_stdlib_android FALSE)
-  else()
-    set(swift_can_crosscompile_stdlib_android TRUE)
-  endif()
-
-  if(swift_build_android AND ${swift_can_crosscompile_stdlib_android})
-    configure_sdk_unix(ANDROID "Android" "android" "android" "armv7" "armv7-none-linux-androideabi" "${SWIFT_ANDROID_SDK_PATH}")
-    # If we're not building for the host, the cross-compiled target should be the 'primary variant'.
-    if("${swift_build_linux}" STREQUAL "FALSE")
-      set(SWIFT_PRIMARY_VARIANT_SDK_default "ANDROID")
-      set(SWIFT_PRIMARY_VARIANT_ARCH_default "armv7")
-    endif()
-  endif()
-
 elseif("${SWIFT_HOST_VARIANT_SDK}" STREQUAL "FREEBSD")
   
   set(CMAKE_EXECUTABLE_FORMAT "ELF")
@@ -705,11 +688,24 @@ elseif("${SWIFT_HOST_VARIANT_SDK}" MATCHES "(OSX|IOS*|TVOS*|WATCHOS*)")
 
 endif()
 
+# Compatible cross-compile SDKS for LINUX: ANDROID (arch always armv7)
+is_sdk_requested(ANDROID swift_build_android)
+if("${SWIFT_ANDROID_NDK_PATH}" STREQUAL "")
+  set(swift_can_crosscompile_stdlib_android FALSE)
+else()
+  set(swift_can_crosscompile_stdlib_android TRUE)
+endif()
+
 if("${SWIFT_PRIMARY_VARIANT_SDK}" STREQUAL "")
   set(SWIFT_PRIMARY_VARIANT_SDK "${SWIFT_PRIMARY_VARIANT_SDK_default}")
 endif()
 if("${SWIFT_PRIMARY_VARIANT_ARCH}" STREQUAL "")
   set(SWIFT_PRIMARY_VARIANT_ARCH "${SWIFT_PRIMARY_VARIANT_ARCH_default}")
+endif()
+
+# Should we cross-compile the standard library for Android?
+if(swift_build_android AND ${swift_can_crosscompile_stdlib_android})
+  configure_sdk_unix(ANDROID "Android" "android" "android" "armv7" "armv7-none-linux-androideabi" "${SWIFT_ANDROID_SDK_PATH}")
 endif()
 
 # Should we cross-compile the standard library for Windows?
