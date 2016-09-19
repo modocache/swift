@@ -86,6 +86,7 @@ function(_add_variant_c_compile_link_flags)
     "-target" "${SWIFT_SDK_${CFLAGS_SDK}_ARCH_${CFLAGS_ARCH}_TRIPLE}")
 
   is_darwin_based_sdk("${CFLAGS_SDK}" IS_DARWIN)
+  message(STATUS ">>> _add_variant_c_compile_flags CFLAGS_SDK: ${CFLAGS_SDK}, IS_DARWIN: ${IS_DARWIN}")
   if(IS_DARWIN)
     list(APPEND result "-isysroot" "${SWIFT_SDK_${CFLAGS_SDK}_PATH}")
   else()
@@ -95,10 +96,15 @@ function(_add_variant_c_compile_link_flags)
   endif()
 
   if("${CFLAGS_SDK}" STREQUAL "ANDROID")
+    set(swift_android_prebuilt_path)
+    if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+      set(swift_android_prebuilt_path "darwin")
+    else()
+      set(swift_android_prebuilt_path "linux")
+    endif()
     list(APPEND result
-      "--sysroot=${SWIFT_ANDROID_SDK_PATH}"
       # Use the linker included in the Android NDK.
-      "-B" "${SWIFT_ANDROID_NDK_PATH}/toolchains/arm-linux-androideabi-${SWIFT_ANDROID_NDK_GCC_VERSION}/prebuilt/linux-x86_64/arm-linux-androideabi/bin/")
+      "-B" "${SWIFT_ANDROID_NDK_PATH}/toolchains/arm-linux-androideabi-${SWIFT_ANDROID_NDK_GCC_VERSION}/prebuilt/${swift_android_prebuilt_path}-x86_64/arm-linux-androideabi/bin/")
   endif()
 
   if("${CFLAGS_SDK}" STREQUAL "WINDOWS")
@@ -289,9 +295,15 @@ function(_add_variant_link_flags)
     # options.  This causes conflicts.
     list(APPEND result "-nostdlib")
   elseif("${LFLAGS_SDK}" STREQUAL "ANDROID")
+    set(swift_android_prebuilt_path)
+    if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+      set(swift_android_prebuilt_path "darwin")
+    else()
+      set(swift_android_prebuilt_path "linux")
+    endif()
     list(APPEND result
         "-ldl"
-        "-L${SWIFT_ANDROID_NDK_PATH}/toolchains/arm-linux-androideabi-${SWIFT_ANDROID_NDK_GCC_VERSION}/prebuilt/linux-x86_64/lib/gcc/arm-linux-androideabi/${SWIFT_ANDROID_NDK_GCC_VERSION}.x"
+        "-L${SWIFT_ANDROID_NDK_PATH}/toolchains/arm-linux-androideabi-${SWIFT_ANDROID_NDK_GCC_VERSION}/prebuilt/${swift_android_prebuilt_path}-x86_64/lib/gcc/arm-linux-androideabi/${SWIFT_ANDROID_NDK_GCC_VERSION}.x"
         "${SWIFT_ANDROID_NDK_PATH}/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/libc++_shared.so")
   else()
     list(APPEND result "-lobjc")
@@ -976,8 +988,10 @@ function(_add_swift_library_single target name)
 
     # If Application Extensions are enabled, pass the linker flag marking
     # the dylib as safe.
-    if (CXX_SUPPORTS_FAPPLICATION_EXTENSION AND (NOT DISABLE_APPLICATION_EXTENSION))
-      list(APPEND link_flags "-Wl,-application_extension")
+    if("${SWIFTLIB_SINGLE_SDK}" MATCHES "${SWIFT_DARWIN_VARIANTS}")
+      if (CXX_SUPPORTS_FAPPLICATION_EXTENSION AND (NOT DISABLE_APPLICATION_EXTENSION))
+        list(APPEND link_flags "-Wl,-application_extension")
+      endif()
     endif()
 
     set(PLIST_INFO_UTI)

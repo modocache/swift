@@ -21,17 +21,12 @@ endif()
 list(APPEND swift_runtime_compile_flags
      "-D__SWIFT_CURRENT_DYLIB=swiftCore")
 
-set(swift_runtime_objc_sources)
-set(swift_runtime_unicode_normalization_sources)
-if(SWIFT_HOST_VARIANT MATCHES "${SWIFT_DARWIN_VARIANTS}")
-  set(swift_runtime_objc_sources
-      ErrorObject.mm
-      SwiftObject.mm
-      SwiftValue.mm
-      Remangle.cpp
-      Reflection.mm)
-else()
-endif()
+set(swift_runtime_objc_sources
+    ErrorObject.mm
+    SwiftObject.mm
+    SwiftValue.mm
+    Remangle.cpp
+    Reflection.mm)
 
 set(swift_runtime_sources
     AnyHashableSupport.cpp
@@ -74,7 +69,16 @@ add_swift_library(swiftRuntime OBJECT_LIBRARY TARGET_LIBRARY
   ${swift_runtime_leaks_sources}
   C_COMPILE_FLAGS ${swift_runtime_compile_flags} -DswiftCore_EXPORTS
   LINK_FLAGS ${swift_runtime_linker_flags}
-  INSTALL_IN_COMPONENT never_install)
+  INSTALL_IN_COMPONENT never_install
+  TARGET_SDKS ALL_APPLE_PLATFORMS)
+
+add_swift_library(swiftRuntime OBJECT_LIBRARY TARGET_LIBRARY
+  ${swift_runtime_sources}
+  ${swift_runtime_leaks_sources}
+  C_COMPILE_FLAGS ${swift_runtime_compile_flags} -DswiftCore_EXPORTS
+  LINK_FLAGS ${swift_runtime_linker_flags}
+  INSTALL_IN_COMPONENT never_install
+  TARGET_SDKS ANDROID CYGWIN FREEBSD LINUX)
 
 set(ELFISH_SDKS)
 foreach(sdk ${SWIFT_CONFIGURED_SDKS})

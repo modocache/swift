@@ -25,7 +25,6 @@ add_swift_library(swiftStdlibStubs OBJECT_LIBRARY TARGET_LIBRARY
   ${swift_stubs_objc_sources}
   C_COMPILE_FLAGS ${swift_stubs_c_compile_flags}
   LINK_FLAGS ${SWIFT_RUNTIME_CORE_LINK_FLAGS}
-  LINK_LIBRARIES ${swift_stubs_link_libraries}
   TARGET_SDKS ALL_APPLE_PLATFORMS
   INSTALL_IN_COMPONENT stdlib)
 
@@ -34,7 +33,7 @@ add_swift_library(swiftStdlibStubs OBJECT_LIBRARY TARGET_LIBRARY
   ${swift_stubs_unicode_normalization_sources}
   C_COMPILE_FLAGS ${swift_stubs_c_compile_flags}
   LINK_FLAGS ${SWIFT_RUNTIME_CORE_LINK_FLAGS}
-  LINK_LIBRARIES ${swift_stubs_link_libraries}
+  LINK_LIBRARIES ${ICU_UC_LIBRARY} ${ICU_I18N_LIBRARY}
   TARGET_SDKS ANDROID CYGWIN FREEBSD LINUX
   INSTALL_IN_COMPONENT stdlib
   DEPENDS_ON_ICU)
