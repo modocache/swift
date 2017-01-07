@@ -1421,7 +1421,7 @@ void SILGenModule::emitSourceFile(SourceFile *sf, unsigned startElem) {
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<SILModule>
-SILModule::constructSIL(Module *mod, SILOptions &options, FileUnit *SF,
+SILModule::constructSIL(ModuleDecl *mod, SILOptions &options, FileUnit *SF,
                         Optional<unsigned> startElem, bool makeModuleFragile,
                         bool isWholeModule) {
   SharedTimer timer("SILGen");
