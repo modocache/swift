@@ -8,32 +8,26 @@
 
 // OSX-NOT: warning: no such SDK:
 // OSX: bin/swift
-// OSX: Driver/sdk.swift
-// OSX: -sdk {{.*}}/Inputs/clang-importer-sdk
-// OSX-NEXT: bin/swift
-// OSX: -sdk {{.*}}/Inputs/clang-importer-sdk
-// OSX: bin/{{.+}} {{.*}}.o{{[ "]}}
-// OSX: {{-syslibroot|--sysroot}} {{.*}}/Inputs/clang-importer-sdk
+// OSX-SAME: Driver/sdk.swift
+// OSX-SAME: -sdk {{.*}}/Inputs/clang-importer-sdk
+// OSX-NEXT: bin/{{.+}} {{.*}}.o{{[ "]}}
+// OSX-SAME: {{-syslibroot|--sysroot}} {{.*}}/Inputs/clang-importer-sdk
 
 // LINUX-NOT: warning: no such SDK:
 // LINUX: bin/swift
-// LINUX: Driver/sdk.swift
-// LINUX: -sdk {{.*}}/Inputs/clang-importer-sdk
-// LINUX-NEXT: bin/swift
-// LINUX: -sdk {{.*}}/Inputs/clang-importer-sdk
+// LINUX-SAME: Driver/sdk.swift
+// LINUX-SAME: -sdk {{.*}}/Inputs/clang-importer-sdk
 // LINUX: bin/{{.+}} {{.*}}swift_begin.o
-// LINUX: {{-syslibroot|--sysroot}} {{.*}}/Inputs/clang-importer-sdk
-// LINUX: {{.*}}swift_end.o
+// LINUX-SAME: {{-syslibroot|--sysroot}} {{.*}}/Inputs/clang-importer-sdk
+// LINUX-SAME: {{.*}}swift_end.o
 
 // FREEBSD-NOT: warning: no such SDK:
 // FREEBSD: bin/swift
-// FREEBSD: Driver/sdk.swift
-// FREEBSD: -sdk {{.*}}/Inputs/clang-importer-sdk
-// FREEBSD-NEXT: bin/swift
-// FREEBSD: -sdk {{.*}}/Inputs/clang-importer-sdk
+// FREEBSD-SAME: Driver/sdk.swift
+// FREEBSD-SAME: -sdk {{.*}}/Inputs/clang-importer-sdk
 // FREEBSD: bin/{{.+}} {{.*}}swift_begin.o
-// FREEBSD: {{-syslibroot|--sysroot}} {{.*}}/Inputs/clang-importer-sdk
-// FREEBSD: {{.*}}swift_end.o
+// FREEBSD-SAME: {{-syslibroot|--sysroot}} {{.*}}/Inputs/clang-importer-sdk
+// FREEBSD-SAME: {{.*}}swift_end.o
 
 // RUN: %swift_driver -driver-print-jobs -repl -sdk %S/Inputs/nonexistent-sdk 2>&1 | %FileCheck %s --check-prefix=SDKWARNING
 // RUN: %swift_driver -driver-print-jobs -sdk %S/Inputs/nonexistent-sdk 2>&1 | %FileCheck %s --check-prefix=SDKWARNING

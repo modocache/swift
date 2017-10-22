@@ -43,7 +43,7 @@
 // MAIN5-elf-NOT: .dSYM
 
 // RUN: %empty-directory(%t) && %empty-directory(%t/tmp) && touch %t/tmp/dummy
-// RUN: env TMPDIR=%t/tmp/ %swiftc_driver -target %target-triple -sdk %sdk -module-cache-path %t -emit-executable %s -o %t/main6 -g -save-temps
+// RUN: env TMPDIR=%t/tmp/ %swiftc_driver -target %target-triple -sdk %sdk -module-cache-path %t -emit-executable %s -o %t/main6 -g -emit-objc-header -save-temps
 // RUN: ls %t/main6
 // RUN: ls %t | %FileCheck -check-prefix=MAIN6-%target-object-format %s
 // RUN: ls %t/tmp | %FileCheck -check-prefix=SAVE-TEMPS %s

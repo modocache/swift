@@ -1202,9 +1202,7 @@ void Driver::buildOutputInfo(const ToolChain &TC, const DerivedArgList &Args,
     // top-level output.
     OI.ShouldGenerateModule = true;
     OI.ShouldTreatModuleAsTopLevelOutput = true;
-  } else if ((OI.DebugInfoKind > IRGenDebugInfoKind::LineTables &&
-              OI.shouldLink()) ||
-             Args.hasArg(options::OPT_emit_objc_header,
+  } else if (Args.hasArg(options::OPT_emit_objc_header,
                          options::OPT_emit_objc_header_path)) {
     // An option has been passed which requires a module, but the user hasn't
     // requested one. Generate a module, but treat it as an intermediate output.

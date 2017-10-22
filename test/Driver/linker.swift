@@ -43,11 +43,9 @@
 // RUN: %swiftc_driver -driver-print-jobs -target x86_64-apple-macosx10.9 -g %s | %FileCheck -check-prefix DEBUG %s
 
 // RUN: %empty-directory(%t)
-// RUN: touch %t/a.o
-// RUN: touch %t/a.swiftmodule
-// RUN: touch %t/b.o
-// RUN: touch %t/b.swiftmodule
+// RUN: touch %t/a.o %t/a.swiftmodule %t/b.o  %t/b.swiftmodule
 // RUN: %swiftc_driver -driver-print-jobs -target x86_64-apple-macosx10.9 %s %t/a.o %t/a.swiftmodule %t/b.o %t/b.swiftmodule -o linker | %FileCheck -check-prefix LINK-SWIFTMODULES %s
+// RUN: %swiftc_driver -driver-print-jobs -g -target x86_64-apple-macosx10.9 %s %t/a.o %t/a.swiftmodule %t/b.o %t/b.swiftmodule -o linker | %FileCheck -check-prefix LINK-SWIFTMODULES %s
 
 // RUN: %swiftc_driver -driver-print-jobs -target x86_64-apple-macosx10.10   %s > %t.simple-macosx10.10.txt
 // RUN: %FileCheck %s < %t.simple-macosx10.10.txt
@@ -264,13 +262,11 @@
 // LINUX_DYNLIB-x86_64: -o dynlib.out
 
 // DEBUG: bin/swift
-// DEBUG-NEXT: bin/swift
 // DEBUG-NEXT: bin/ld{{"? }}
-// DEBUG: -add_ast_path {{.*}}/{{[^/]+}}.swiftmodule
-// DEBUG: -o linker
+// DEBUG-SAME: -o linker
 // DEBUG-NEXT: {{^|bin/}}dsymutil
-// DEBUG: linker
-// DEBUG: -o linker.dSYM
+// DEBUG-SAME: linker
+// DEBUG-SAME: -o linker.dSYM
 
 // LINK-SWIFTMODULES: bin/swift
 // LINK-SWIFTMODULES-NEXT: bin/ld{{"? }}

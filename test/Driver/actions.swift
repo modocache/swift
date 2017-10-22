@@ -38,18 +38,20 @@
 // RUN: %swiftc_driver -driver-print-actions -gnone -g %s 2>&1 | %FileCheck %s -check-prefix=DEBUG
 // DEBUG: 0: input, "{{.*}}actions.swift", swift
 // DEBUG: 1: compile, {0}, object
-// DEBUG: 2: merge-module, {1}, swiftmodule
-// DEBUG: 3: link, {1, 2}, image
-// DEBUG: 4: generate-dSYM, {3}, dSYM
+// DEBUG: 2: link, {1}, image
+// DEBUG: 3: generate-dSYM, {2}, dSYM
 
 // RUN: %swiftc_driver -driver-print-actions -gnone %s 2>&1 | %FileCheck %s -check-prefix=BASIC
 // RUN: %swiftc_driver -driver-print-actions -g -gnone %s 2>&1 | %FileCheck %s -check-prefix=BASIC
 
 // RUN: %swiftc_driver -driver-print-actions -g -verify-debug-info %s 2>&1 | %FileCheck %s -check-prefixes=DEBUG,VERIFY-DEBUG-INFO
 // RUN: %swiftc_driver -driver-print-actions -gnone -g -verify-debug-info %s 2>&1 | %FileCheck %s -check-prefixes=DEBUG,VERIFY-DEBUG-INFO
-// VERIFY-DEBUG-INFO: 5: verify-debug-info, {4}, none
+// VERIFY-DEBUG-INFO: 4: verify-debug-info, {3}, none
 
-// RUN: %swiftc_driver -driver-print-actions -gdwarf-types -verify-debug-info %s 2>&1 | %FileCheck %s -check-prefixes=EXEC-AND-MODULE,VERIFY-DEBUG-DWARF
+// RUN: %swiftc_driver -driver-print-actions -gdwarf-types -verify-debug-info %s 2>&1 | %FileCheck %s -check-prefixes=EXEC-AND-LINK,VERIFY-DEBUG-DWARF
+// EXEC-AND-LINK: 0: input, "{{.*}}actions.swift", swift
+// EXEC-AND-LINK: 1: compile, {0}, object
+// EXEC-AND-LINK: 2: link, {1}, image
 // VERIFY-DEBUG-DWARF-TYPES: 4: generate-dSYM, {3}, dSYM
 // VERIFY-DEBUG-DWARF-TYPES: 5: verify-debug-info, {4}, none
 
@@ -96,9 +98,8 @@
 // DEBUG-MULTI: 3: compile, {2}, object
 // DEBUG-MULTI: 4: input, "{{.*}}actions.swift", swift
 // DEBUG-MULTI: 5: compile, {4}, object
-// DEBUG-MULTI: 6: merge-module, {1, 3, 5}, swiftmodule
-// DEBUG-MULTI: 7: link, {1, 3, 5, 6}, image
-// DEBUG-MULTI: 8: generate-dSYM, {7}, dSYM
+// DEBUG-MULTI: 6: link, {1, 3, 5}, image
+// DEBUG-MULTI: 7: generate-dSYM, {6}, dSYM
 
 
 // RUN: touch %t/a.o %t/b.o
@@ -114,9 +115,8 @@
 // DEBUG-LINK-ONLY: 1: input, "{{.*}}/b.o", object
 // DEBUG-LINK-ONLY: 2: input, "{{.*}}/a.swiftmodule", swiftmodule
 // DEBUG-LINK-ONLY: 3: input, "{{.*}}/b.swiftmodule", swiftmodule
-// DEBUG-LINK-ONLY: 4: merge-module, {2, 3}, swiftmodule
-// DEBUG-LINK-ONLY: 5: link, {0, 1, 4}, image
-// DEBUG-LINK-ONLY: 6: generate-dSYM, {5}, dSYM
+// DEBUG-LINK-ONLY: 4: link, {0, 1, 2, 3}, image
+// DEBUG-LINK-ONLY: 5: generate-dSYM, {4}, dSYM
 
 // RUN: touch %t/c.swift
 // RUN: %swiftc_driver -driver-print-actions %t/c.swift %t/a.o %t/b.o %t/a.swiftmodule %t/b.swiftmodule -o main 2>&1 | %FileCheck %s -check-prefix=LINK-SWIFTMODULES
