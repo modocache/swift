@@ -22,6 +22,13 @@ using namespace constraints;
 
 Optional<ConstraintSystem::PotentialBindings>
 ConstraintSystem::determineBestBindings() {
+  bool DebugSolver = TC.getLangOpts().DebugConstraintSolver;
+  if (DebugSolver) {
+    auto &log = getASTContext().TypeCheckerDebug->getStream();
+    log << "---Determining best overload bindings for the given "
+        << "expression---\n";
+  }
+
   // Look for potential type variable bindings.
   Optional<PotentialBindings> bestBindings;
   for (auto typeVar : getTypeVariables()) {
@@ -34,7 +41,7 @@ ConstraintSystem::determineBestBindings() {
     if (!bindings)
       continue;
 
-    if (TC.getLangOpts().DebugConstraintSolver) {
+    if (DebugSolver) {
       auto &log = getASTContext().TypeCheckerDebug->getStream();
       bindings.dump(typeVar, log, solverState->depth * 2);
     }

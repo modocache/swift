@@ -1391,6 +1391,7 @@ ConstraintSystem::solve(Expr *&expr,
     expr->print(log);
     log << "\n";
     print(log);
+    log << "---Solving constraints for the given expression---\n";
   }
 
   // Try to solve the constraint system using computed suggestions.
